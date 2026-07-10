@@ -1,8 +1,41 @@
 @import "tailwindcss";
 
+/* Ljust editorial-tema, alltid (oberoende av systeminställning).
+   Off-white bas (#F4F2F2), kolsvart bläck (#1D2128), och två accenter:
+   djup teal (primär, läsbar) + livlig orange (signatur-pop i fyllningar). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f2f2;
+  --foreground: #1d2128;
+}
+
+/* Paletten definieras EN gång här genom att skriva om Tailwinds färg-tokens.
+   Neutral-rampen är inverterad (lågt tal = mörkt) och sval; "emerald" är
+   ombyggd till teal så all befintlig accent-klass (text-emerald-400,
+   border-emerald-500/25 …) följer med utan komponentändring. "brand" = orange,
+   används medvetet i fyllningar (orange klarar inte textkontrast på ljust). */
+@theme {
+  /* Neutral (sval, ljus) — lågt tal mörkt, högt tal ljust */
+  --color-neutral-50: #141519;
+  --color-neutral-100: #1d2128; /* primär text (given charcoal) */
+  --color-neutral-200: #2a282e;
+  --color-neutral-300: #3a383e; /* brödtext */
+  --color-neutral-400: #565459; /* sekundär text */
+  --color-neutral-500: #6c6a70; /* labels/mono */
+  --color-neutral-600: #86848a; /* dämpade räknare */
+  --color-neutral-700: #c9c7c9; /* svaga pilar */
+  --color-neutral-800: #e4e2e3; /* linjer, hover-ytor */
+  --color-neutral-900: #fbfafa; /* kort/paneler (elevated) */
+  --color-neutral-950: #f4f2f2; /* sidbas */
+
+  /* Primär accent: djup teal (given #215E61) — läsbar som text på ljust */
+  --color-emerald-300: #2c7a7e;
+  --color-emerald-400: #215e61; /* huvudaccent */
+  --color-emerald-500: #1c5154;
+  --color-emerald-600: #16403f;
+  --color-emerald-950: #0d2a2b; /* sval, mjuk skugg-ton */
+
+  /* Signatur-pop: orange (given #FF9E20) — endast fyllningar/marker, ej text */
+  --color-brand: #ff9e20;
 }
 
 @theme inline {
@@ -12,15 +45,53 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Siffertunga vyer (tabeller, poäng, datum) — jämn breddjustering. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accent-tonad markering i stället för webbläsarens defaultblå. */
+::selection {
+  background: color-mix(in oklab, #215e61 26%, transparent);
+}
+
+/* Konsekvent, synlig tangentbordsfokus (mjukare än webbläsarens default). */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, #215e61 75%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Mjuk scroll-reveal: sektioner tonar upp när de kommer in i vyn. Ren CSS
+   scroll-driven animation — noll beroenden. Innehållet är fullt synligt om
+   webbläsaren saknar stöd (@supports) och står helt still vid reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 20%;
+    }
+  }
+}
+
+@keyframes reveal-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
