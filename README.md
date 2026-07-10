@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kommunfotbollen
 
-## Getting Started
+Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, målskyttar, nyheter och poddar — samlat på ett ställe och hållet uppdaterat helt automatiskt, utan manuell redigering.
 
-First, run the development server:
+**Live:** [systemstatus-sidan](https://kommunfotboll.se/systemstatus) visar i realtid när varje bakgrundsjobb senast kördes och hur mycket data som samlats in.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Vad appen gör
+
+- **Tabeller & matcher** — hämtas från Everysport för fyra lokala serier, synkas var 15:e minut.
+- **Målskyttar** — Everysport saknar målskyttar på den här nivån, så appen skrapar lokaltidningarnas (Dagens Västervik, Vimmerby Tidning) matchreferat direkt och läser ut vem som gjorde mål med Claude, med matchens redan kända resultat som facit för att undvika gissningar.
+- **Nyheter** — artiklar om de lokala lagen samlas in via sektionsskrapning av lokaltidningarna, RSS och Google News som djupare/mer motståndskraftigt komplement, med dubblettfiltrering och AI-relevansbedömning.
+- **Poddar** — episoder från de lokala fotbollspoddarna Nykritat och Fotbollsviken.
+- **Systemstatus** — en öppen vy över driften: senast körda jobb, mängd insamlad data och hur pipelinen är uppbyggd.
+
+## Teknikstack
+
+- [Next.js 16](https://nextjs.org) (App Router, Server Components)
+- [PGlite](https://pglite.dev) — inbäddad Postgres (WASM), ingen extern databas att drifta
+- [Drizzle ORM](https://orm.drizzle.team)
+- [Zod](https://zod.dev) för validering av extern data
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [Claude](https://www.anthropic.com/claude) (`claude-haiku-4-5`) för relevansbedömning och målskytte-extraktion
+
+## Arkitektur i korthet
+
+```
+Everysport, lokaltidningar, Google News, poddflöden
+                    │
+                    ▼
+     AI-extraktion (Claude) — relevans & målskyttar
+                    │
+                    ▼
+        PGlite + Drizzle (inbäddad databas)
+                    │
+                    ▼
+          Next.js Server Components
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Appen är sin egen cron: `instrumentation.ts` schemalägger matchsynk var 15:e minut och nyhets-/poddsynk dagligen kl 22:00 (svensk tid), utan extern schemaläggare.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Köra lokalt
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Öppna [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbedömning och målskytte-extraktion — utan den körs matcher/tabeller som vanligt, men nyheter/målskyttar hoppas över.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`/api/sync` kan anropas manuellt för att köra alla synkjobb direkt, som backup eller för felsökning.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Bakgrund
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ett portfolioprojekt av [Alex Åhman](https://alexahman.se) — byggt för att visa upp ett komplett, källagnostiskt insamlingssystem: flera datakällor, AI-driven extraktion med strikta regler mot att gissa, och en databas som sköter sig själv.
