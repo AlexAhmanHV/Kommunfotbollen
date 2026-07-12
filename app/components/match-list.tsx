@@ -14,11 +14,15 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",
 });
 
-// Flera mål av samma spelare slås ihop: "Albin Kito, Albin Kito" → "Albin Kito (2)"
+// Flera mål av samma spelare slås ihop: "Albin Kito, Albin Kito" → "Albin Kito (2)",
+// och den som gjort flest mål listas först.
 function formatScorers(players: string[]): string {
   const counts = new Map<string, number>();
   for (const p of players) counts.set(p, (counts.get(p) ?? 0) + 1);
-  return [...counts.entries()].map(([name, n]) => (n > 1 ? `${name} (${n})` : name)).join(", ");
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, n]) => (n > 1 ? `${name} (${n})` : name))
+    .join(", ");
 }
 
 export async function MatchList({ matches }: { matches: UiMatch[] }) {

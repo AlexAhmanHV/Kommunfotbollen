@@ -35,6 +35,34 @@ function formatDuration(sec: number | null): string | null {
   return `${min} min`;
 }
 
+type FormResult = "W" | "D" | "L";
+
+// Senaste matcherna som bokstäver (V/O/F), äldst till vänster, senast till höger.
+function FormLetters({ results }: { results: FormResult[] }) {
+  if (results.length === 0) return null;
+  const letter = { W: "V", D: "O", L: "F" };
+  const label = { W: "Vinst", D: "Oavgjort", L: "Förlust" };
+  return (
+    <div
+      className="mt-2 flex items-center gap-1.5 font-mono text-xs"
+      aria-label={`Form, senaste matcherna: ${results.map((r) => label[r]).join(", ")}`}
+    >
+      <span className="text-neutral-500">Form:</span>
+      {results.map((r, i) => (
+        <span
+          key={i}
+          title={label[r]}
+          className={`font-semibold ${
+            r === "W" ? "text-emerald-400" : r === "D" ? "text-neutral-500" : "text-rose-400"
+          }`}
+        >
+          {letter[r]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function PodcastItem({ e, fmt }: { e: PodEpisode; fmt: Intl.DateTimeFormat }) {
   const dur = formatDuration(e.durationSec);
   return (
@@ -238,6 +266,23 @@ export default async function Home() {
     for (const id of localIn) latestSeen.add(id);
   }
 
+  // Form: senaste 5 resultaten per lokalt lag, äldst→senast (finishedLocal är redan senast→äldst).
+  const FORM_LENGTH = 5;
+  const formByTeam = new Map<string, FormResult[]>();
+  for (const m of finishedLocal) {
+    for (const id of [m.homeId, m.awayId]) {
+      if (!LOCAL_TEAM_IDS.has(id)) continue;
+      const arr = formByTeam.get(id) ?? [];
+      if (arr.length >= FORM_LENGTH) continue;
+      const isHome = m.homeId === id;
+      const gf = isHome ? m.homeScore! : m.awayScore!;
+      const ga = isHome ? m.awayScore! : m.homeScore!;
+      arr.push(gf > ga ? "W" : gf < ga ? "L" : "D");
+      formByTeam.set(id, arr);
+    }
+  }
+  for (const arr of formByTeam.values()) arr.reverse();
+
   return (
     <div className="space-y-14">
       <section className="pt-2">
@@ -279,6 +324,7 @@ export default async function Home() {
                   {t.pts} p / {t.gp} m
                 </span>
               </div>
+              <FormLetters results={formByTeam.get(t.teamId) ?? []} />
               {(() => {
                 const nm = nextMatch.get(t.teamId);
                 if (!nm) return null;
