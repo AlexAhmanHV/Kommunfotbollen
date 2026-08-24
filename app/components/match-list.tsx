@@ -81,12 +81,10 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
                 <span className="w-14 shrink-0" aria-hidden />
                 <span className="flex-1 text-right">{formatScorers(homeScorers)}</span>
                 <span
-                  className="shrink-0 text-brand"
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
                   title="Målskyttar (från lokaltidningarnas matchreferat)"
                   aria-hidden
-                >
-                  ⚽
-                </span>
+                />
                 <span className="flex-1">{formatScorers(awayScorers)}</span>
               </div>
             )}

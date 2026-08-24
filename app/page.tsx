@@ -295,14 +295,16 @@ export default async function Home() {
         </p>
       </section>
 
-      <section className="reveal">
-        <SectionHeading count={`${localTeams.length} lag`}>Lokala lag</SectionHeading>
+      <section>
+        <SectionHeading variant="feature" count={`${localTeams.length} lag`}>
+          Lokala lag
+        </SectionHeading>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {localTeams.map((t) => (
             <Link
               key={t.teamId}
               href={`/serie/${t.leagueId}`}
-              className="group rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
+              className="reveal group rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2.5">
@@ -342,14 +344,14 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="reveal">
+      <section>
         <SectionHeading>Serier</SectionHeading>
         <div className="grid gap-3 sm:grid-cols-2">
           {allLeagues.map((l) => (
             <Link
               key={l.id}
               href={`/serie/${l.id}`}
-              className="group flex items-center justify-between gap-3 rounded-lg border border-neutral-800/70 p-4 transition duration-200 hover:border-emerald-500/40 hover:bg-neutral-900"
+              className="reveal group flex items-center justify-between gap-3 rounded-lg border border-neutral-800/70 p-4 transition duration-200 hover:border-emerald-500/40 hover:bg-neutral-900"
             >
               <div>
                 <div className="font-semibold group-hover:text-emerald-400">
@@ -430,16 +432,19 @@ export default async function Home() {
         </section>
       )}
 
-      <div className="reveal grid gap-8 sm:grid-cols-2">
-        <section>
-          <SectionHeading>Lokala lagens senaste matcher</SectionHeading>
-          <MatchList matches={latest} />
-        </section>
-        <section id="kommande" className="scroll-mt-24">
-          <SectionHeading>Kommande matcher</SectionHeading>
-          <MatchList matches={upcomingLocal.slice(0, 9)} />
-        </section>
-      </div>
+      <section className="reveal">
+        <SectionHeading>Matcher</SectionHeading>
+        <div className="grid gap-8 sm:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-neutral-300">Senaste</h3>
+            <MatchList matches={latest} />
+          </div>
+          <div id="kommande" className="scroll-mt-24">
+            <h3 className="mb-3 text-sm font-semibold text-neutral-300">Kommande</h3>
+            <MatchList matches={upcomingLocal.slice(0, 9)} />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
