@@ -298,7 +298,7 @@ export default async function Home() {
             <Link
               key={t.teamId}
               href={`/serie/${t.leagueId}`}
-              className="reveal group min-w-[260px] flex-1 basis-[260px] rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
+              className="reveal group min-w-[260px] max-w-sm flex-1 basis-[260px] rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2.5">
