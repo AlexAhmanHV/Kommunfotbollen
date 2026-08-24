@@ -15,7 +15,7 @@ Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, 
 ## Teknikstack
 
 - [Next.js 16](https://nextjs.org) (App Router, Server Components)
-- [PGlite](https://pglite.dev) — inbäddad Postgres (WASM), ingen extern databas att drifta
+- [Supabase](https://supabase.com) — hanterad Postgres (fri nivå)
 - [Drizzle ORM](https://orm.drizzle.team)
 - [Zod](https://zod.dev) för validering av extern data
 - [Tailwind CSS v4](https://tailwindcss.com)
@@ -30,7 +30,7 @@ Everysport, lokaltidningar, Google News, poddflöden
      AI-extraktion (Claude) — relevans & målskyttar
                     │
                     ▼
-        PGlite + Drizzle (inbäddad databas)
+        Supabase Postgres + Drizzle
                     │
                     ▼
           Next.js Server Components

@@ -1,9 +1,11 @@
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
 import * as schema from "./schema";
 
-// PGlite = inbäddad Postgres (WASM) som persisterar till .pgdata/.
-// Samma pg-dialekt som produktion (Neon/Supabase) — schema.ts flyttar orört.
+// Postgres (Supabase i produktion, valfri lokal Postgres i dev) via
+// postgres-js. Samma pg-dialekt som schema.ts alltid varit skrivet för —
+// inget här ändrar tabellstrukturen.
 // Singleton via globalThis så Next.js HMR inte öppnar databasen flera gånger.
 
 const DDL = `
@@ -105,12 +107,16 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 const globalForDb = globalThis as unknown as { __kfDb?: Promise<Db> };
 
 async function createDb(): Promise<Db> {
-  // I produktion (Render) pekar PGLITE_DATA_DIR mot en beständig disk, så
-  // databasen överlever omstarter/deploys. Lokalt faller det tillbaka till
-  // .pgdata i projektroten.
-  const pglite = new PGlite(process.env.PGLITE_DATA_DIR ?? "./.pgdata");
-  await pglite.exec(DDL);
-  return drizzle(pglite, { schema });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error(
+      "DATABASE_URL saknas — sätt den i .env.local (dev) eller som miljövariabel (prod).",
+    );
+  }
+  const client = postgres(connectionString, { prepare: false });
+  const db = drizzle(client, { schema });
+  await db.execute(sql.raw(DDL));
+  return db;
 }
 
 export function getDb(): Promise<Db> {

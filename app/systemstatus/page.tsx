@@ -24,8 +24,8 @@ function relativeTime(date: Date | null): string {
   return `${days} dygn sedan`;
 }
 
-// PGlite returnerar rådata (sträng) för sql<>-uttryck, inte ett äkta Date-
-// objekt som för vanliga kolumn-select — normalisera explicit.
+// sql<>-uttryck returnerar rådata (sträng), inte ett äkta Date-objekt
+// som för vanliga kolumn-select — normalisera explicit.
 async function getMax(query: Promise<{ m: unknown }[]>): Promise<Date | null> {
   const rows = await query;
   const raw = rows[0]?.m;
@@ -188,12 +188,12 @@ export default async function SystemStatus() {
           <FlowArrow />
           <FlowStep label="AI-extraktion" detail="Claude läser matchreferat och bedömer relevans" accent />
           <FlowArrow />
-          <FlowStep label="Databas" detail="PGlite + Drizzle, körs inbäddat i appen" />
+          <FlowStep label="Databas" detail="Supabase Postgres + Drizzle" />
           <FlowArrow />
           <FlowStep label="Sidan" detail="Next.js Server Components, ingen cache-fördröjning" />
         </div>
         <p className="mt-3 font-mono text-xs text-neutral-600">
-          Byggt med Next.js 16 · PGlite · Drizzle · Zod · Tailwind v4 · Claude API
+          Byggt med Next.js 16 · Supabase Postgres · Drizzle · Zod · Tailwind v4 · Claude API
         </p>
         <p className="mt-3 font-mono text-xs text-neutral-600">
           <a

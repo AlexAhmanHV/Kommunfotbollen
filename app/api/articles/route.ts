@@ -54,7 +54,7 @@ export async function GET() {
       )
     ORDER BY a.published_at DESC
   `);
-  const rows = visible.rows as { title: string; source: string; recent: boolean }[];
+  const rows = visible as unknown as { title: string; source: string; recent: boolean }[];
   const bySource: Record<string, number> = {};
   for (const r of rows) bySource[r.source] = (bySource[r.source] ?? 0) + 1;
 
@@ -67,6 +67,6 @@ export async function GET() {
     visibleBySource: bySource,
     dvTitles: rows.filter((r) => /Dagens Västervik/i.test(r.source)).map((r) => r.title),
     rejectedPairs: rejectedRows,
-    fullyHidden: fullyHidden.rows,
+    fullyHidden,
   });
 }
