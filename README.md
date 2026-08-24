@@ -2,15 +2,24 @@
 
 Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, målskyttar, nyheter och poddar — samlat på ett ställe och hållet uppdaterat helt automatiskt, utan manuell redigering.
 
-**Live:** [systemstatus-sidan](https://kommunfotboll.se/systemstatus) visar i realtid när varje bakgrundsjobb senast kördes och hur mycket data som samlats in.
+**Live:** [kommunfotboll.onrender.com](https://kommunfotboll.onrender.com) — [systemstatus-sidan](https://kommunfotboll.onrender.com/systemstatus) visar i realtid när varje bakgrundsjobb senast kördes och hur mycket data som samlats in.
 
 ## Vad appen gör
 
 - **Tabeller & matcher** — hämtas från Everysport för fyra lokala serier, synkas var 15:e minut.
 - **Målskyttar** — Everysport saknar målskyttar på den här nivån, så appen skrapar lokaltidningarnas (Dagens Västervik, Vimmerby Tidning) matchreferat direkt och läser ut vem som gjorde mål med Claude, med matchens redan kända resultat som facit för att undvika gissningar.
-- **Nyheter** — artiklar om de lokala lagen samlas in via sektionsskrapning av lokaltidningarna, RSS och Google News som djupare/mer motståndskraftigt komplement, med dubblettfiltrering och AI-relevansbedömning.
+- **Nyheter** — artiklar om de lokala lagen samlas in via sektionsskrapning av lokaltidningarna, RSS och Google News som djupare/mer motståndskraftigt komplement, med dubblettfiltrering och AI-relevansbedömning som avgör om en artikel faktiskt handlar om ett bevakat lag.
 - **Poddar** — episoder från de lokala fotbollspoddarna Nykritat och Fotbollsviken.
 - **Systemstatus** — en öppen vy över driften: senast körda jobb, mängd insamlad data och hur pipelinen är uppbyggd.
+
+## AI-extraktionen i detalj
+
+Två separata Claude-uppgifter gör att appen kan använda källor som aldrig var byggda för att vara datakällor:
+
+- **Relevansfiltrering** — Google News och RSS ger många falska träffar (namnkrockar, artiklar om fel sport, fel ort). Claude läser varje artikel och avgör om den faktiskt handlar om ett bevakat lag, innan den visas.
+- **Målskytte-extraktion** — lokaltidningarnas matchreferat är fri text, inte strukturerad data. Claude läser referatet och plockar ut vem som gjorde mål, men får matchens redan kända slutresultat som facit i prompten — modellen ska hitta namnen i texten, inte gissa fram ett resultat som redan är känt.
+
+Båda uppgifterna är medvetet snävt avgränsade: en AI-uppgift per beslut, med explicit facit där det finns, istället för en generell "läs och sammanfatta"-prompt.
 
 ## Teknikstack
 
@@ -24,6 +33,12 @@ Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, 
 ## Arkitektur i korthet
 
 ```
+GitHub Actions (cron var 15:e min / dagligen)
+                    │
+                    ▼
+     POST /api/sync — autentiserad med CRON_SECRET
+                    │
+                    ▼
 Everysport, lokaltidningar, Google News, poddflöden
                     │
                     ▼
@@ -36,7 +51,7 @@ Everysport, lokaltidningar, Google News, poddflöden
           Next.js Server Components
 ```
 
-Appen är sin egen cron: `instrumentation.ts` schemalägger matchsynk var 15:e minut och nyhets-/poddsynk dagligen kl 22:00 (svensk tid), utan extern schemaläggare.
+Driften är källagnostisk och stateless: GitHub Actions anropar den autentiserade `/api/sync`-endpointen på schema (matcher var 15:e minut, nyheter/poddar dagligen), appen själv har inget eget minne av vad som redan körts. Det gör att appen kan köras på Render Free-nivån — ingen betald instans, ingen persistent disk, bara en webbtjänst som svarar på anrop och en extern databas.
 
 ## Köra lokalt
 
@@ -47,10 +62,10 @@ npm run dev
 
 Öppna [http://localhost:3000](http://localhost:3000).
 
-Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbedömning och målskytte-extraktion — utan den körs matcher/tabeller som vanligt, men nyheter/målskyttar hoppas över.
+Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbedömning och målskytte-extraktion — utan den körs matcher/tabeller som vanligt, men nyheter/målskyttar hoppas över. Sätt även `DATABASE_URL` mot en Postgres-instans (Supabase eller lokal).
 
-`/api/sync` kan anropas manuellt för att köra alla synkjobb direkt, som backup eller för felsökning.
+`/api/sync` kan anropas manuellt (`?target=matches` / `?target=news`, eller inget för allt) för att köra synkjobb direkt, som backup eller för felsökning. I produktion krävs `Authorization: Bearer <CRON_SECRET>` — lokalt hoppas kontrollen över om `CRON_SECRET` inte är satt.
 
 ## Bakgrund
 
-Ett portfolioprojekt av [Alex Åhman](https://alexahman.se) — byggt för att visa upp ett komplett, källagnostiskt insamlingssystem: flera datakällor, AI-driven extraktion med strikta regler mot att gissa, och en databas som sköter sig själv.
+Ett portfolioprojekt av [Alex Åhman](https://alexahman.se) — byggt för att visa upp ett komplett, källagnostiskt insamlingssystem: flera datakällor, AI-driven extraktion med strikta regler mot att gissa, och en drift som kostar noll kronor i månaden.
