@@ -14,8 +14,7 @@ import {
 import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { MAX_ARTICLE_AGE_DAYS } from "@/lib/news";
 
-const NEWS_RECENT_DAYS = 7;
-const NEWS_MIN_SHOWN = 12;
+const NEWS_SHOWN_COUNT = 10;
 const PODCAST_RECENT = 3; // senaste avsnitten per podd, resten bakom "visa mer"
 
 // De två poddarna i fast ordning (Nykritat tors, Fotbollsviken fre)
@@ -221,14 +220,9 @@ export default async function Home() {
     if (existing) existing.teamNames.push(r.teamName);
     else news.set(r.id, { ...r, teamNames: [r.teamName] });
   }
-  // Senaste veckan visas direkt, äldre (upp till 60 dygn) bakom "visa mer".
-  // Under säsongsuppehåll är veckan nästan tom, så vi visar alltid minst
-  // NEWS_MIN_SHOWN artiklar oavsett ålder — annars ser sidan tom ut fast vi
-  // har massor av bevakning i det äldre skiktet.
-  const recentCutoff = Date.now() - NEWS_RECENT_DAYS * 24 * 60 * 60 * 1000;
+  // De NEWS_SHOWN_COUNT senaste visas direkt, resten bakom "visa äldre".
   const allNews = [...news.values()]; // redan sorterad nyast först
-  const withinWeek = allNews.filter((a) => a.publishedAt.getTime() >= recentCutoff).length;
-  const shownCount = Math.min(allNews.length, Math.max(withinWeek, NEWS_MIN_SHOWN));
+  const shownCount = Math.min(allNews.length, NEWS_SHOWN_COUNT);
   const recentNews = allNews.slice(0, shownCount);
   const olderNews = allNews.slice(shownCount);
 
@@ -299,12 +293,12 @@ export default async function Home() {
         <SectionHeading variant="feature" count={`${localTeams.length} lag`}>
           Lokala lag
         </SectionHeading>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-wrap gap-3">
           {localTeams.map((t) => (
             <Link
               key={t.teamId}
               href={`/serie/${t.leagueId}`}
-              className="reveal group rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
+              className="reveal group min-w-[260px] flex-1 basis-[260px] rounded-xl border border-brand/30 bg-brand/[0.06] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-brand/60 hover:bg-brand/[0.11] hover:shadow-lg hover:shadow-brand/20 active:translate-y-0"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2.5">

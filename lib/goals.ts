@@ -456,10 +456,13 @@ export async function syncGoalsFromArticles(): Promise<void> {
       continue;
     }
 
-    // Eskalering: titel+ingress gav inga skyttar, men artikeln har en riktig
-    // URL vi vet kan läsas fritt (DV/Vimmerby T, inte Google News-redirect
-    // eller VT) — hämta hela texten och ge det en andra chans.
-    if (parsed.goals.length === 0) {
+    // Eskalering: titel+ingress gav FÄRRE skyttar än matchens totala målantal
+    // (helt tomt, eller bara någon av dem — ingressen nämner ofta bara första
+    // målskytten även när referatet räknar upp alla), och artikeln har en
+    // riktig URL vi vet kan läsas fritt (DV/Vimmerby T, inte Google News-
+    // redirect eller VT) — hämta hela texten och ge det en andra chans.
+    const expectedGoals = match.homeScore + match.awayScore;
+    if (parsed.goals.length < expectedGoals) {
       const fullUrl = fetchableUrl(articleId);
       if (fullUrl) {
         await sleep(FETCH_GAP_MS);
@@ -468,11 +471,14 @@ export async function syncGoalsFromArticles(): Promise<void> {
           if (res.ok) {
             const bodyText = extractArticleText(await res.text());
             const longPrompt = `${scoreLine}\n\n${bodyText}`;
-            parsed = await extractGoalsFromText(client, longPrompt);
+            const longResult = await extractGoalsFromText(client, longPrompt);
+            // fulltexten är en strikt utökning — behåll bara om den hittade
+            // FLER skyttar, annars är kortversionen minst lika bra.
+            if (longResult.goals.length > parsed.goals.length) parsed = longResult;
           }
         } catch (err) {
           // fulltext-hämtningen är ett rent tillägg — misslyckas den behåller
-          // vi bara det (tomma) resultatet från titel+ingress
+          // vi bara resultatet från titel+ingress
           console.error(`[goals] fulltext-hämtning misslyckades för ${articleId}:`, err);
         }
       }

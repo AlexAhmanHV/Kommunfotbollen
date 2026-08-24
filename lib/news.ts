@@ -234,7 +234,7 @@ async function upsertArticle(
     })
     .onConflictDoUpdate({
       target: articles.id,
-      set: { title: item.title, summary: item.summary, fetchedAt: now },
+      set: { title: item.title, summary: item.summary, publishedAt, fetchedAt: now },
     });
 
   for (const teamId of teamIds) {
@@ -251,10 +251,40 @@ async function upsertArticle(
   }
 }
 
+// DV:s sidor saknar JSON-LD datePublished helt — datumet finns bara i en
+// inline-JS-variabel ("articlePublishedTime = '2026-08-23 19:06:59';"),
+// naiv Europe/Stockholm-lokaltid utan zonangivelse. Utan den föll varje DV-
+// artikel tillbaka på skraptidpunkten istället för sitt riktiga datum, vilket
+// gjorde nyhetslistan felsorterad (Vimmerby Tidnings JSON-LD funkar redan).
+function stockholmOffsetMinutes(utcMs: number): number {
+  const part = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Stockholm",
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(new Date(utcMs))
+    .find((p) => p.type === "timeZoneName")?.value;
+  const m = part?.match(/GMT([+-]\d+)/);
+  return m ? Number(m[1]) * 60 : 60;
+}
+
+function parseStockholmLocalTime(s: string): string | null {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, se] = m.slice(1).map(Number);
+  // självkorrigerande: gissa UTC, hämta zonens offset för den gissningen,
+  // gissa om — stabiliserar över DST-brytpunkter på ett par iterationer.
+  let utcMs = Date.UTC(y, mo - 1, d, h, mi, se);
+  for (let i = 0; i < 2; i++) {
+    utcMs = Date.UTC(y, mo - 1, d, h, mi, se) - stockholmOffsetMinutes(utcMs) * 60_000;
+  }
+  return new Date(utcMs).toISOString();
+}
+
 // Läser ut rubrik, kort ingress och publiceringsdatum ur en artikelsida.
 // og:title speglar den AKTUELLA rubriken (uppdateras om redaktionen byter
 // den efter publicering, till skillnad från <title> som vi bara faller
-// tillbaka på om og:title saknas). datePublished kommer från sidans JSON-LD.
+// tillbaka på om og:title saknas). datePublished kommer i första hand från
+// sidans JSON-LD (Vimmerby Tidning), annars DV:s articlePublishedTime-variabel.
 function extractArticleMeta(
   html: string,
 ): { title: string | null; summary: string | null; publishedAt: string | null } {
@@ -289,8 +319,10 @@ function extractArticleMeta(
     summary = paras[0] ? cleanText(paras[0]) : null;
   }
 
-  const dateMatch = html.match(/"datePublished"\s*:\s*"([^"]+)"/);
-  return { title, summary, publishedAt: dateMatch ? dateMatch[1] : null };
+  const jsonLdDate = html.match(/"datePublished"\s*:\s*"([^"]+)"/)?.[1];
+  const dvDate = html.match(/articlePublishedTime\s*=\s*"([^"]+)"/)?.[1];
+  const publishedAt = jsonLdDate ?? (dvDate ? parseStockholmLocalTime(dvDate) : null);
+  return { title, summary, publishedAt };
 }
 
 // Skrapar DV:s och Vimmerby T:s fotbollssektioner direkt (samma mekanism som
