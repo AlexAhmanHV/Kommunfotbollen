@@ -1,13 +1,30 @@
-import { NextResponse } from "next/server";
-import { syncAll } from "@/lib/sync";
+import { NextRequest, NextResponse } from "next/server";
+import { syncAll, syncMatches, syncNewsAndFilter } from "@/lib/sync";
 
-// Manuell/cron-endpoint för full synk (matcher + nyheter + AI-filter).
-// Svarar alltid 200 med en status så en cron-klient inte fastnar i retry-loop.
-export async function POST() {
+// Manuell/cron-endpoint. Anropas av GitHub Actions (var 15:e min för
+// matcher, dagligen för nyheter) och kan även köras manuellt utan
+// target-param för en full synk (backup/felsökning).
+// Kräver Authorization: Bearer <CRON_SECRET> om CRON_SECRET är satt.
+export async function POST(req: NextRequest) {
+  const expected = process.env.CRON_SECRET;
+  if (expected) {
+    const auth = req.headers.get("authorization");
+    if (auth !== `Bearer ${expected}`) {
+      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
+  }
+
+  const target = req.nextUrl.searchParams.get("target");
   const started = Date.now();
   try {
-    await syncAll();
-    return NextResponse.json({ ok: true, ms: Date.now() - started });
+    if (target === "matches") {
+      await syncMatches();
+    } else if (target === "news") {
+      await syncNewsAndFilter();
+    } else {
+      await syncAll();
+    }
+    return NextResponse.json({ ok: true, target: target ?? "all", ms: Date.now() - started });
   } catch (err) {
     console.error("[sync] /api/sync misslyckades:", err);
     return NextResponse.json({
