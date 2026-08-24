@@ -107,7 +107,7 @@ async function fetchNextData(
     if (!res.ok) continue;
     const html = await res.text();
     const m = html.match(
-      /<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/s,
+      /<script id="__NEXT_DATA__" type="application\/json">([\s\S]+?)<\/script>/,
     );
     if (!m) continue;
     lastPp = JSON.parse(m[1]).props.pageProps;

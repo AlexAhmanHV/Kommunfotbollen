@@ -105,7 +105,10 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 const globalForDb = globalThis as unknown as { __kfDb?: Promise<Db> };
 
 async function createDb(): Promise<Db> {
-  const pglite = new PGlite("./.pgdata");
+  // I produktion (Render) pekar PGLITE_DATA_DIR mot en beständig disk, så
+  // databasen överlever omstarter/deploys. Lokalt faller det tillbaka till
+  // .pgdata i projektroten.
+  const pglite = new PGlite(process.env.PGLITE_DATA_DIR ?? "./.pgdata");
   await pglite.exec(DDL);
   return drizzle(pglite, { schema });
 }
