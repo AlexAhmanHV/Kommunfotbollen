@@ -4,6 +4,14 @@ Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, 
 
 **Live:** [kommunfotboll.onrender.com](https://kommunfotboll.onrender.com) — [systemstatus-sidan](https://kommunfotboll.onrender.com/systemstatus) visar i realtid när varje bakgrundsjobb senast kördes och hur mycket data som samlats in.
 
+## Skärmdumpar
+
+<img src="docs/screenshots/home.png" width="700" alt="Startsida med lokala lag, tabellplacering och form" />
+
+<img src="docs/screenshots/news.png" width="700" alt="AI-filtrerade nyheter om lagen, taggade per lag" />
+
+<img src="docs/screenshots/standings.png" width="700" alt="Serietabell med spelprogram" />
+
 ## Vad appen gör
 
 - **Tabeller & matcher** — hämtas från Everysport för fyra lokala serier, synkas var 15:e minut.
