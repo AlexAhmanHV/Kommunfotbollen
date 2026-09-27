@@ -37,9 +37,16 @@ type Db = Awaited<ReturnType<typeof getDb>>;
 // AI:n returnerar ibland ett mål med tomt spelarnamn trots instruktionen att
 // hoppa över dem. Släng just de målen — inte hela referatet, som annars
 // markerades bearbetat och tappades för gott.
+// Platshållare som AI:n ibland skriver i stället för att hoppa över målet.
+const UNKNOWN_PLAYER = /^(okänd|okänd spelare|okänd målskytt|oklart|ej namngiven|n\/?a|-)$/i;
+
 const namedGoalsSchema = z
   .array(z.object({ team: z.string(), player: z.string() }))
-  .transform((goals) => goals.filter((g) => g.player.trim() !== ""));
+  .transform((goals) =>
+    goals
+      .map((g) => ({ ...g, player: g.player.trim() }))
+      .filter((g) => g.player !== "" && !UNKNOWN_PLAYER.test(g.player)),
+  );
 
 const goalSchema = z.object({
   homeTeam: z.string(),
@@ -75,8 +82,19 @@ Regler:
 - homeTeam/awayTeam = de två lagen (hemmalag först om det framgår, annars valfri ordning).
 - goals listas i den ordning målen gjordes. team = det lag vars spelare gjorde målet (använd lagnamnet som det skrivs i texten).
 - Ta bara med RIKTIGA mål i matchen. Uteslut straffläggning efter oavgjort, självmål-oklarheter räknas till det lag som fick målet.
+- Självmål: skriv player som "Självmål" (aldrig ett lagnamn).
 - Om ett mål saknar namngiven skytt, hoppa över det målet.
 - Om texten inte är ett matchreferat med resultat, svara {"homeTeam":"","awayTeam":"","homeScore":0,"awayScore":0,"goals":[]}.`;
+
+// AI:n skriver ibland ett lagnamn som "spelare" när texten bara säger att det
+// blev självmål. Spara sådana — och allt som redan heter självmål — enhetligt.
+function playerOrOwnGoal(player: string, homeName: string, awayName: string): string {
+  const p = normalize(player);
+  if (p.includes("självmål") || p === normalize(homeName) || p === normalize(awayName)) {
+    return "Självmål";
+  }
+  return player;
+}
 
 function normalize(s: string): string {
   return s
@@ -144,9 +162,32 @@ async function syncGoalsFromPaper(
     ).map((r) => r.url),
   );
   const todo = urls.filter((u) => !done.has(u)).slice(0, MAX_REPORTS_PER_RUN);
-  if (todo.length === 0) return;
+  await processReports(db, client, teamName, now, todo);
+}
 
-  for (const url of todo) {
+/** Läser om referat från början: tar bort deras sparade skyttar och
+ * bearbetningsmarkering och extraherar igen (t.ex. efter en rättad textläsning). */
+export async function reextractReports(urls: string[]): Promise<void> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || urls.length === 0) return;
+
+  const db = await getDb();
+  await db.delete(matchGoals).where(inArray(matchGoals.sourceUrl, urls));
+  await db.delete(dvReports).where(inArray(dvReports.url, urls));
+
+  const allTeams = await db.select({ id: teams.id, name: teams.name }).from(teams);
+  const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
+  await processReports(db, new Anthropic({ apiKey }), teamName, new Date(), urls);
+}
+
+async function processReports(
+  db: Db,
+  client: Anthropic,
+  teamName: Map<string, string>,
+  now: Date,
+  urls: string[],
+): Promise<void> {
+  for (const url of urls) {
     await sleep(FETCH_GAP_MS); // artig mot tidningen — undvik rate-limit
     let text: string;
     try {
@@ -279,9 +320,9 @@ async function linkAndStore(
   const resolved: { teamId: string; player: string }[] = [];
   for (const g of data.goals) {
     if (teamNameMatches(hn, match.homeTeamId, g.team)) {
-      resolved.push({ teamId: match.homeTeamId, player: g.player });
+      resolved.push({ teamId: match.homeTeamId, player: playerOrOwnGoal(g.player, hn, an) });
     } else if (teamNameMatches(an, match.awayTeamId, g.team)) {
-      resolved.push({ teamId: match.awayTeamId, player: g.player });
+      resolved.push({ teamId: match.awayTeamId, player: playerOrOwnGoal(g.player, hn, an) });
     }
     // okänt lag för målet → droppa (fångas av konsistenskollen nedan)
   }
@@ -522,9 +563,9 @@ export async function syncGoalsFromArticles(): Promise<void> {
     const resolved: { teamId: string; player: string }[] = [];
     for (const g of parsed.goals) {
       if (teamNameMatches(hn, match.homeTeamId, g.team)) {
-        resolved.push({ teamId: match.homeTeamId, player: g.player });
+        resolved.push({ teamId: match.homeTeamId, player: playerOrOwnGoal(g.player, hn, an) });
       } else if (teamNameMatches(an, match.awayTeamId, g.team)) {
-        resolved.push({ teamId: match.awayTeamId, player: g.player });
+        resolved.push({ teamId: match.awayTeamId, player: playerOrOwnGoal(g.player, hn, an) });
       }
     }
     const homeGoals = resolved.filter((r) => r.teamId === match.homeTeamId).length;

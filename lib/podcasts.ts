@@ -1,5 +1,6 @@
 import { getDb } from "./db/client";
 import { podcastEpisodes } from "./db/schema";
+import { decodeEntities } from "./html-entities";
 
 // Poddflöden: de två lokala fotbollspoddar som täcker kommunfotbollen.
 // Båda ligger på pod.space och har rena RSS 2.0-flöden (title/link/pubDate/
@@ -16,20 +17,6 @@ const USER_AGENT =
 // Vi behåller de senaste avsnitten per podd (sidan visar 3 + "visa mer").
 const KEEP_PER_PODCAST = 20;
 const MAX_SUMMARY_LENGTH = 300;
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-  aring: "å", auml: "ä", ouml: "ö", Aring: "Å", Auml: "Ä", Ouml: "Ö",
-  eacute: "é", Eacute: "É", ndash: "–", mdash: "—", hellip: "…",
-  rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“",
-};
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
-}
 
 function cleanText(s: string): string {
   const text = decodeEntities(decodeEntities(s).replace(/<[^>]+>/g, " "))

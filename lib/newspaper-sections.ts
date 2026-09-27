@@ -1,4 +1,5 @@
 import { TEAM_NEWS_ALIASES } from "./local-teams";
+import { decodeEntities } from "./html-entities";
 
 // Delad infrastruktur för att hitta och läsa lokaltidningarnas artiklar —
 // används av både lib/goals.ts (målskyttar) och lib/news.ts (artikellistan).
@@ -93,9 +94,11 @@ export function mentionsLocalTeam(text: string): boolean {
 
 /** Rubrik + stycken ur en artikelsida som ren text (max 4000 tecken). */
 export function extractArticleText(html: string): string {
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+  const title = decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
   const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
-    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/&[a-z]+;|&#\d+;/g, " ").replace(/\s+/g, " ").trim())
+    // taggar bort, entiteter AVKODADE (inte bortslängda: "F&auml;lt" ska bli
+    // "Fält", inte "F lt" som AI:n sedan gissar på)
+    .map((m) => decodeEntities(m[1].replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim())
     .filter((p) => p.length > 20);
   return `${title}\n\n${paras.join("\n")}`.slice(0, 4000);
 }

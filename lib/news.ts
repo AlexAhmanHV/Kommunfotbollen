@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "./db/client";
 import { articles, articleTeams, newsChecked } from "./db/schema";
+import { decodeEntities } from "./html-entities";
 import { TEAM_NEWS_ALIASES } from "./local-teams";
 import {
   PAPERS,
@@ -29,20 +30,6 @@ export const MAX_ARTICLE_AGE_DAYS = 60;
 // Nya URL:er att läsa per tidning och körning — första körningarna fyller på
 // bakåt i omgångar i stället för att hämta hundratals artiklar på en gång.
 const MAX_NEW_URLS_PER_PAPER = 60;
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-  aring: "å", auml: "ä", ouml: "ö", Aring: "Å", Auml: "Ä", Ouml: "Ö",
-  eacute: "é", Eacute: "É", ndash: "–", mdash: "—", hellip: "…",
-  rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“",
-};
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
-}
 
 function cleanText(s: string): string {
   // vissa flöden HTML-kodar sin markup (&lt;p&gt;) — avkoda innan taggarna
