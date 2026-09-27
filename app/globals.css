@@ -8,38 +8,9 @@
   --foreground: #1d2128;
 }
 
-/* Paletten definieras EN gång här genom att skriva om Tailwinds färg-tokens.
-   Neutral-rampen är inverterad (lågt tal = mörkt) och sval; "emerald" är
-   ombyggd till teal så all befintlig accent-klass (text-emerald-400,
-   border-emerald-500/25 …) följer med utan komponentändring. "brand" = orange,
-   används medvetet i fyllningar (orange klarar inte textkontrast på ljust). */
+/* Paletten definieras EN gång här genom att skriva om Tailwinds färg-tokens. */
 @theme {
-  /* Neutral (sval, ljus) — lågt tal mörkt, högt tal ljust */
-  --color-neutral-50: #141519;
-  --color-neutral-100: #1d2128; /* primär text (given charcoal) */
-  --color-neutral-200: #2a282e;
-  --color-neutral-300: #3a383e; /* brödtext */
-  --color-neutral-400: #565459; /* sekundär text */
-  --color-neutral-500: #6c6a70; /* labels/mono */
-  --color-neutral-600: #86848a; /* dämpade räknare */
-  --color-neutral-700: #c9c7c9; /* svaga pilar */
-  --color-neutral-800: #e4e2e3; /* linjer, hover-ytor */
-  --color-neutral-900: #fbfafa; /* kort/paneler (elevated) */
-  --color-neutral-950: #f4f2f2; /* sidbas */
-
-  /* Primär accent: djup teal (given #215E61) — läsbar som text på ljust */
-  --color-emerald-300: #2c7a7e;
-  --color-emerald-400: #215e61; /* huvudaccent */
-  --color-emerald-500: #1c5154;
-  --color-emerald-600: #16403f;
-  --color-emerald-950: #0d2a2b; /* sval, mjuk skugg-ton */
-
-  /* Signatur-pop: orange (given #FF9E20) — endast fyllningar/marker, ej text */
-  --color-brand: #ff9e20;
-
-  /* Redesign steg 1: namngivna färger. De omskrivna neutral/emerald/brand
-     ovan används fortfarande av seriesidan, "Så funkar det" och systemstatus
-     och tas bort i steg 4. Ny kod använder bara dessa. */
+  /* Redesign steg 1: namngivna färger. Ny kod använder bara dessa. */
   --color-surface-dark: #0e1116;
   --color-surface-dark-raised: #171b22;
   --color-line-dark: #2a2f38;
@@ -58,7 +29,6 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --font-display: var(--font-barlow-condensed);
 }
 
@@ -70,11 +40,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-}
-
-/* Siffertunga vyer (tabeller, poäng, datum) — jämn breddjustering. */
-.font-mono {
-  font-variant-numeric: tabular-nums;
 }
 
 /* Accent-tonad markering i stället för webbläsarens defaultblå. */

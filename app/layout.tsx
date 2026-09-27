@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Geist } from "next/font/google";
 import Link from "next/link";
 import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
@@ -43,11 +43,6 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 const barlowCondensed = Barlow_Condensed({
   variable: "--font-barlow-condensed",
   subsets: ["latin"],
@@ -69,7 +64,7 @@ export default async function RootLayout({
   return (
     <html
       lang="sv"
-      className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${barlowCondensed.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-surface text-ink">
         <header className="sticky top-0 z-40 border-b border-line-dark bg-surface-dark text-on-dark">
