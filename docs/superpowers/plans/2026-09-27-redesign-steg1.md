@@ -41,6 +41,8 @@
 | `app/components/team-crest.tsx` (ändras) | Monogram i ny stil |
 | `app/components/match-list.tsx` (skrivs om) | Matchlistan i ny stil |
 | `app/serie/[id]/page.tsx`, `app/sa-funkar-det/page.tsx`, `app/systemstatus/page.tsx`, `app/not-found.tsx` (ändras) | Rot-elementet blir `PageContainer` |
+| `lib/team-images.ts` (ny) | Lagbild per lokalt lag (`public/images/lag/<slug>.jpg`), reserv när den saknas |
+| `app/components/home/ticker.tsx` (ny) | Rullande resultat/kommande-list |
 | `app/components/home/matchday-hero.tsx` (ny) | Veckans match / senaste omgången / säsongen slut |
 | `app/components/home/round-strip.tsx` (ny) | Omgångens övriga lokala matcher |
 | `app/components/home/team-grid.tsx` (ny) | Lagkorten (`TeamGrid` + `TeamCard`) |
@@ -1019,7 +1021,7 @@ function formatScorers(players: string[]): string {
     .join(", ");
 }
 
-// Lagnamn; lokala lag i fetstil med ett kort grönt streck framför.
+// Lagnamn; lokala lag i fetstil.
 function TeamName({ id, name, align }: { id: string; name: string; align: "left" | "right" }) {
   const local = isLocalTeam(id);
   return (
@@ -1162,27 +1164,314 @@ git commit -m "feat: visual foundation for the redesign (tokens, Barlow Condense
 
 ---
 
-### Task 3: Den mörka zonen (veckans match, omgången, lagkort)
+### Task 3: Den mörka zonen med bilder och rörelse
+
+> Ersätter den ursprungliga Task 3 (specens tillägg "bilder och rörelse", 2026-09-27).
 
 **Files:**
+- Modify: `lib/matchday.ts` (ny funktion `tickerItems`)
+- Modify: `lib/matchday.test.ts` (tester för `tickerItems`)
+- Create: `lib/team-images.ts`
+- Create: `public/images/lag/README.md`
+- Modify: `app/globals.css` (rörelse + hero-skugga)
+- Create: `app/components/home/ticker.tsx`
 - Create: `app/components/home/matchday-hero.tsx`
 - Create: `app/components/home/round-strip.tsx`
 - Create: `app/components/home/team-grid.tsx`
 
 **Interfaces:**
-- Consumes: `UiMatch` (`@/lib/queries`), `MatchdayMode`, `Standing`, `TeamSummary`, `FormLetter` (`@/lib/matchday`), `TeamCrest` (`../team-crest`), tokens och `font-display` (Task 2).
+- Consumes: `UiMatch` (`@/lib/queries`), `MatchdayMode`, `Standing`, `TeamSummary`, `FormLetter` (`@/lib/matchday`, Task 1), `TeamCrest` (`../team-crest`), tokens och `font-display` (Task 2).
 - Produces:
-  - `MatchdayHero({ mode, featured, standings }: { mode: MatchdayMode; featured: UiMatch | null; standings: ReadonlyMap<string, Standing> })`
-  - `RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiMatch[] })` — renderar inget om `matches` är tom.
+  - `type TickerItem = { kind: "result" | "upcoming"; match: UiMatch }` och `tickerItems(matches: UiMatch[], localIds: ReadonlySet<string>, now: Date): TickerItem[]` i `lib/matchday.ts`
+  - `teamImage(teamId: string): string | null` och `TEAM_IMAGE_SLUGS: Record<string, string>` i `lib/team-images.ts`
+  - CSS-klasser: `ticker`, `ticker-track`, `ticker-dup`, `kenburns`, `rise` (fördröjning via CSS-variabeln `--i`), `hero-shade`
+  - `Ticker({ items }: { items: TickerItem[] })` — renderar inget om `items` är tom
+  - `MatchdayHero({ mode, featured, standings })` — samma props som förut; renderar sin egen fullbreddssektion med bilder (behållaren `max-w-5xl` ligger inuti)
+  - `RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiMatch[] })` — renderar inget om `matches` är tom
   - `TeamGrid({ teams }: { teams: TeamSummary[] })`
 
-Komponenterna renderas först på sidan i Task 4; det här tasket levererar dem typkontrollerade.
+- [ ] **Step 1: Skriv testerna för `tickerItems`**
 
-- [ ] **Step 1: Skapa `app/components/home/matchday-hero.tsx`**
+Lägg till `tickerItems` i importen överst i `lib/matchday.test.ts` (samma import-block som `isResultMissing` m.fl.), och lägg till sist i filen:
+
+```ts
+describe("tickerItems", () => {
+  it("senaste resultaten nyast först, sedan kommande inom 7 dagar i tidsordning", () => {
+    const older = match({ homeId: "L1", status: "FINISHED", startsAt: at(-6), homeScore: 1, awayScore: 0 });
+    const newer = match({ awayId: "L2", status: "FINISHED", startsAt: at(-1), homeScore: 2, awayScore: 2 });
+    const later = match({ homeId: "L2", startsAt: at(5) });
+    const sooner = match({ homeId: "L1", startsAt: at(2) });
+    const items = tickerItems([older, later, newer, sooner], LOCAL, NOW);
+    assert.deepEqual(
+      items.map((i) => [i.kind, i.match.id]),
+      [
+        ["result", newer.id],
+        ["result", older.id],
+        ["upcoming", sooner.id],
+        ["upcoming", later.id],
+      ],
+    );
+  });
+  it("utelämnar icke-lokala matcher, resultat äldre än 14 dagar och kommande bortom 7 dagar", () => {
+    const other = match({ status: "FINISHED", startsAt: at(-1), homeScore: 1, awayScore: 1 });
+    const old = match({ homeId: "L1", status: "FINISHED", startsAt: at(-15), homeScore: 3, awayScore: 0 });
+    const far = match({ homeId: "L1", startsAt: at(8) });
+    assert.deepEqual(tickerItems([other, old, far], LOCAL, NOW), []);
+  });
+  it("högst 8 resultat", () => {
+    const results = Array.from({ length: 10 }, (_, i) =>
+      match({ homeId: "L1", status: "FINISHED", startsAt: at(-1 - i), homeScore: 1, awayScore: 0 }),
+    );
+    assert.equal(tickerItems(results, LOCAL, NOW).length, 8);
+  });
+});
+```
+
+- [ ] **Step 2: Kör testerna och se dem misslyckas**
+
+Run: `npm test`
+Expected: FAIL — `tickerItems` finns inte (SyntaxError/does not provide an export named 'tickerItems').
+
+- [ ] **Step 3: Implementera `tickerItems` sist i `lib/matchday.ts`**
+
+```ts
+export type TickerItem = { kind: "result" | "upcoming"; match: UiMatch };
+
+const TICKER_RESULT_DAYS = 14;
+const TICKER_MAX_RESULTS = 8;
+
+/** Tickern: senaste lokala resultaten (nyast först) följt av kommande lokala matcher inom 7 dagar. */
+export function tickerItems(
+  matches: UiMatch[],
+  localIds: ReadonlySet<string>,
+  now: Date,
+): TickerItem[] {
+  const t = now.getTime();
+  const local = matches.filter((m) => isLocalMatch(m, localIds));
+  const results = local
+    .filter(
+      (m) =>
+        m.status === "FINISHED" &&
+        m.startsAt.getTime() <= t &&
+        m.startsAt.getTime() >= t - TICKER_RESULT_DAYS * DAY_MS,
+    )
+    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())
+    .slice(0, TICKER_MAX_RESULTS);
+  const upcoming = local
+    .filter(
+      (m) =>
+        m.status === "UPCOMING" &&
+        m.startsAt.getTime() >= t &&
+        m.startsAt.getTime() <= t + WINDOW_MS,
+    )
+    .sort(byStart);
+  return [
+    ...results.map((match): TickerItem => ({ kind: "result", match })),
+    ...upcoming.map((match): TickerItem => ({ kind: "upcoming", match })),
+  ];
+}
+```
+
+- [ ] **Step 4: Kör testerna och se dem gå igenom**
+
+Run: `npm test`
+Expected: PASS, `ℹ fail 0` (23 tester).
+
+- [ ] **Step 5: Skapa `lib/team-images.ts`**
+
+```ts
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+// Lagbilder. Lägg en liggande bild (minst ~1600×900) som
+// public/images/lag/<slug>.jpg så används den automatiskt; saknas den visas
+// en grafisk reserv. Kontrollen görs en gång per serverprocess.
+export const TEAM_IMAGE_SLUGS: Record<string, string> = {
+  "eswidget-9925": "ifk-vastervik",
+  "eswidget-10040": "hjorted-totebo",
+  "eswidget-51390": "tjust-if-ff",
+  "eswidget-9942": "vasterviks-ff",
+  "eswidget-23106": "boif",
+  "eswidget-10039": "gunnebo-if",
+  "eswidget-224214": "fc-orbacken",
+  "eswidget-10249": "overums-ik",
+  "eswidget-9982": "ankarsrums-is",
+  "eswidget-191798": "vasterviks-dam",
+};
+
+const cache = new Map<string, string | null>();
+
+export function teamImage(teamId: string): string | null {
+  const cached = cache.get(teamId);
+  if (cached !== undefined) return cached;
+  const slug = TEAM_IMAGE_SLUGS[teamId];
+  const url =
+    slug && existsSync(path.join(process.cwd(), "public", "images", "lag", `${slug}.jpg`))
+      ? `/images/lag/${slug}.jpg`
+      : null;
+  cache.set(teamId, url);
+  return url;
+}
+```
+
+- [ ] **Step 6: Skapa `public/images/lag/README.md`**
+
+```md
+# Lagbilder
+
+En liggande bild per lokalt lag, minst ca 1600×900 px, som JPG med exakt det
+här filnamnet. Bilden används automatiskt i "Veckans match" och på lagkortet
+(efter omstart/deploy). Saknas bilden visas en grafisk reserv.
+
+| Lag | Filnamn |
+|---|---|
+| IFK Västervik | `ifk-vastervik.jpg` |
+| Hjorted/Totebo | `hjorted-totebo.jpg` |
+| Tjust IF FF | `tjust-if-ff.jpg` |
+| Västerviks FF | `vasterviks-ff.jpg` |
+| B.O.IF | `boif.jpg` |
+| Gunnebo IF | `gunnebo-if.jpg` |
+| FC Örbäcken | `fc-orbacken.jpg` |
+| Överums IK | `overums-ik.jpg` |
+| Ankarsrums IS | `ankarsrums-is.jpg` |
+| Västerviks damfotboll IF | `vasterviks-dam.jpg` |
+
+Använd bara bilder ni har rätt att publicera.
+```
+
+- [ ] **Step 7: Rörelse och hero-skugga i `app/globals.css`**
+
+Lägg till sist i filen:
+
+```css
+/* Redesign steg 1: rörelse på startsidan. Allt står still vid
+   prefers-reduced-motion. */
+@keyframes ticker-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.12) translate(-2%, -1%);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ticker-track {
+    animation: ticker-scroll var(--ticker-duration, 40s) linear infinite;
+  }
+  .ticker:hover .ticker-track {
+    animation-play-state: paused;
+  }
+  .kenburns {
+    animation: kenburns 16s ease-in-out infinite alternate;
+  }
+  .rise {
+    animation: rise 0.55s ease-out both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+
+/* Utan rörelse: tickern står still och går att scrolla i sidled; dubbletten
+   som behövs för den sömlösa loopen döljs. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    overflow-x: auto;
+  }
+  .ticker-dup {
+    display: none;
+  }
+}
+
+/* Mörkläggning över lagbilderna i Veckans match: mörkast i mitten (där tiden
+   står) och nedåt mot resten av zonen. */
+.hero-shade {
+  background:
+    linear-gradient(90deg, rgb(14 17 22 / 0.45), rgb(14 17 22 / 0.88) 50%, rgb(14 17 22 / 0.45)),
+    linear-gradient(0deg, #0e1116, transparent 60%);
+}
+```
+
+- [ ] **Step 8: Skapa `app/components/home/ticker.tsx`**
 
 ```tsx
+import type { TickerItem } from "@/lib/matchday";
+
+const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
+  weekday: "short",
+  timeZone: "Europe/Stockholm",
+});
+const timeFmt = new Intl.DateTimeFormat("sv-SE", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Stockholm",
+});
+
+function Row({ items, duplicate }: { items: TickerItem[]; duplicate?: boolean }) {
+  return (
+    <ul className={`flex shrink-0 ${duplicate ? "ticker-dup" : ""}`} aria-hidden={duplicate || undefined}>
+      {items.map(({ kind, match: m }) => (
+        <li
+          key={`${kind}-${m.id}`}
+          className="px-5 py-1.5 font-display text-sm font-bold uppercase tracking-wide"
+        >
+          {kind === "result" ? (
+            <>
+              {m.homeName} <span className="font-extrabold">{m.homeScore}–{m.awayScore}</span> {m.awayName}
+            </>
+          ) : (
+            <>
+              {weekdayFmt.format(m.startsAt)} {timeFmt.format(m.startsAt)} · {m.homeName} – {m.awayName}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Rullande list med senaste resultat och kommande avspark. Innehållet står
+// två gånger i rad så att loopen blir sömlös (animationen flyttar -50 %).
+export function Ticker({ items }: { items: TickerItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div
+      className="ticker overflow-hidden whitespace-nowrap bg-accent text-surface-dark"
+      aria-label="Senaste resultat och kommande matcher"
+    >
+      <div
+        className="ticker-track inline-flex"
+        style={{ "--ticker-duration": `${Math.max(20, items.length * 5)}s` } as React.CSSProperties}
+      >
+        <Row items={items} />
+        <Row items={items} duplicate />
+      </div>
+    </div>
+  );
+}
+```
+
+- [ ] **Step 9: Skapa `app/components/home/matchday-hero.tsx`**
+
+```tsx
+import Image from "next/image";
 import type { UiMatch } from "@/lib/queries";
 import type { MatchdayMode, Standing } from "@/lib/matchday";
+import { teamImage } from "@/lib/team-images";
 import { TeamCrest } from "../team-crest";
 
 const dayFmt = new Intl.DateTimeFormat("sv-SE", {
@@ -1196,6 +1485,25 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   minute: "2-digit",
   timeZone: "Europe/Stockholm",
 });
+
+// Ena halvan av affischen: lagbilden med långsam zoom, eller en mörk gradient
+// med lagets emblem stort och svagt när bild saknas.
+function HeroHalf({ teamId, name, logoUrl }: { teamId: string; name: string; logoUrl: string | null }) {
+  const image = teamImage(teamId);
+  return (
+    <div className="relative overflow-hidden">
+      {image ? (
+        <Image src={image} alt="" fill sizes="50vw" className="kenburns object-cover" />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]">
+          <div className="opacity-15">
+            <TeamCrest name={name} logoUrl={logoUrl} size={160} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HeroTeam({
   name,
@@ -1221,8 +1529,8 @@ function HeroTeam({
   );
 }
 
-// Veckans match (upcoming), mest intressanta spelade matchen (recent) eller
-// säsongsuppehåll (offseason). Urvalet görs i lib/matchday.ts.
+// Veckans match som affisch (upcoming), mest intressanta spelade matchen
+// (recent) eller säsongsuppehåll (offseason). Urvalet görs i lib/matchday.ts.
 export function MatchdayHero({
   mode,
   featured,
@@ -1234,7 +1542,7 @@ export function MatchdayHero({
 }) {
   if (mode === "offseason" || !featured) {
     return (
-      <div className="py-4">
+      <div className="mx-auto max-w-5xl px-4 pb-4 pt-12">
         <p className="font-display text-sm font-bold uppercase tracking-widest text-accent">
           Kommunfotbollen
         </p>
@@ -1255,34 +1563,41 @@ export function MatchdayHero({
       : timeFmt.format(featured.startsAt);
 
   return (
-    <div>
-      <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-on-dark-muted">
-        <span className="rounded bg-accent px-2 py-1 font-display text-sm font-bold tracking-wide text-surface-dark">
-          {mode === "recent" ? "Senaste omgången" : "Veckans match"}
-        </span>
-        {featured.leagueName} · {dayFmt.format(featured.startsAt)}
-      </p>
-      <div className="mt-6 grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-        <HeroTeam
-          name={featured.homeName}
-          logoUrl={featured.homeLogo}
-          standing={standings.get(featured.homeId)}
-        />
-        <span className="text-center font-display text-6xl font-extrabold tabular-nums text-accent sm:text-7xl">
-          {center}
-        </span>
-        <HeroTeam
-          name={featured.awayName}
-          logoUrl={featured.awayLogo}
-          standing={standings.get(featured.awayId)}
-        />
+    <div className="relative isolate overflow-hidden">
+      <div className="absolute inset-0 -z-10 grid grid-cols-2">
+        <HeroHalf teamId={featured.homeId} name={featured.homeName} logoUrl={featured.homeLogo} />
+        <HeroHalf teamId={featured.awayId} name={featured.awayName} logoUrl={featured.awayLogo} />
+      </div>
+      <div className="hero-shade absolute inset-0 -z-10" aria-hidden />
+      <div className="mx-auto max-w-5xl px-4 pb-8 pt-16 sm:pt-24">
+        <p className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-on-dark-muted">
+          <span className="rounded bg-accent px-2 py-1 font-display text-sm font-bold tracking-wide text-surface-dark">
+            {mode === "recent" ? "Senaste omgången" : "Veckans match"}
+          </span>
+          {featured.leagueName} · {dayFmt.format(featured.startsAt)}
+        </p>
+        <div className="mt-6 grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
+          <HeroTeam
+            name={featured.homeName}
+            logoUrl={featured.homeLogo}
+            standing={standings.get(featured.homeId)}
+          />
+          <span className="text-center font-display text-6xl font-extrabold tabular-nums text-accent sm:text-7xl">
+            {center}
+          </span>
+          <HeroTeam
+            name={featured.awayName}
+            logoUrl={featured.awayLogo}
+            standing={standings.get(featured.awayId)}
+          />
+        </div>
       </div>
     </div>
   );
 }
 ```
 
-- [ ] **Step 2: Skapa `app/components/home/round-strip.tsx`**
+- [ ] **Step 10: Skapa `app/components/home/round-strip.tsx`**
 
 ```tsx
 import type { UiMatch } from "@/lib/queries";
@@ -1308,9 +1623,13 @@ function shortLeague(name: string): string {
 export function RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiMatch[] }) {
   if (matches.length === 0) return null;
   return (
-    <ul className="mt-8 grid grid-cols-2 gap-2 md:grid-cols-4">
-      {matches.map((m) => (
-        <li key={m.id} className="rounded-lg bg-surface-dark-raised px-3 py-2.5">
+    <ul className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      {matches.map((m, i) => (
+        <li
+          key={m.id}
+          className="rise rounded-lg bg-surface-dark-raised px-3 py-2.5"
+          style={{ "--i": i } as React.CSSProperties}
+        >
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate text-sm font-medium">
               {m.homeName} – {m.awayName}
@@ -1331,11 +1650,13 @@ export function RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiM
 }
 ```
 
-- [ ] **Step 3: Skapa `app/components/home/team-grid.tsx`**
+- [ ] **Step 11: Skapa `app/components/home/team-grid.tsx`**
 
 ```tsx
+import Image from "next/image";
 import Link from "next/link";
 import type { FormLetter, TeamSummary } from "@/lib/matchday";
+import { teamImage } from "@/lib/team-images";
 import { TeamCrest } from "../team-crest";
 
 const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
@@ -1375,80 +1696,115 @@ function Form({ form }: { form: FormLetter[] }) {
   );
 }
 
-function TeamCard({ team }: { team: TeamSummary }) {
+function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
+  const image = teamImage(team.teamId);
   const body = (
     <>
-      <div className="flex items-center gap-2">
-        <TeamCrest name={team.name} logoUrl={team.logoUrl} size={22} />
-        <span className="min-w-0 truncate font-display text-base font-bold uppercase leading-none">
-          {team.name}
+      <div className="relative h-24 overflow-hidden">
+        {image ? (
+          <Image
+            src={image}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 20vw, 70vw"
+            className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-110"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]">
+            <div className="opacity-15">
+              <TeamCrest name={team.name} logoUrl={team.logoUrl} size={80} />
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-surface-dark/85 to-transparent" aria-hidden />
+        <span className="absolute bottom-2 left-2">
+          <TeamCrest name={team.name} logoUrl={team.logoUrl} size={26} />
         </span>
-        <span className="ml-auto shrink-0 font-display text-2xl font-extrabold leading-none tabular-nums">
+        <span className="absolute bottom-1.5 right-2 font-display text-3xl font-extrabold leading-none tabular-nums text-on-dark">
           {team.position ?? "–"}
           {team.position != null && (
             <small className="font-sans text-[10px] font-medium text-on-dark-muted">:a</small>
           )}
         </span>
       </div>
-      <Form form={team.form} />
-      <div className="mt-2.5 flex flex-col gap-0.5">
-        {team.next ? (
-          <>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-              Nästa · {weekdayFmt.format(team.next.startsAt)} {dayMonthFmt.format(team.next.startsAt)}
-            </span>
-            <span className="truncate text-sm font-semibold text-on-dark">
-              <span className="font-normal text-on-dark-muted">{team.next.home ? "hemma" : "borta"}</span>{" "}
-              {team.next.opponent}
-            </span>
-          </>
-        ) : (
-          <span className="text-sm text-on-dark-muted">Ingen match inlagd</span>
-        )}
+      <div className="p-3">
+        <span className="block truncate font-display text-base font-bold uppercase leading-none">
+          {team.name}
+        </span>
+        <Form form={team.form} />
+        <div className="mt-2.5 flex flex-col gap-0.5">
+          {team.next ? (
+            <>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                Nästa · {weekdayFmt.format(team.next.startsAt)} {dayMonthFmt.format(team.next.startsAt)}
+              </span>
+              <span className="truncate text-sm font-semibold text-on-dark">
+                <span className="font-normal text-on-dark-muted">{team.next.home ? "hemma" : "borta"}</span>{" "}
+                {team.next.opponent}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm text-on-dark-muted">Ingen match inlagd</span>
+          )}
+        </div>
       </div>
     </>
   );
 
-  const cls = "block rounded-lg bg-surface-dark-raised p-3 transition-colors";
+  const cls =
+    "group rise block w-[70%] shrink-0 snap-start overflow-hidden rounded-lg bg-surface-dark-raised transition duration-200 md:w-auto";
+  const style = { "--i": index } as React.CSSProperties;
   return team.leagueId ? (
-    <Link href={`/serie/${team.leagueId}`} className={`${cls} hover:bg-line-dark`}>
+    <Link
+      href={`/serie/${team.leagueId}`}
+      className={`${cls} hover:shadow-xl hover:shadow-black/40 motion-safe:hover:-translate-y-1`}
+      style={style}
+    >
       {body}
     </Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <div className={cls} style={style}>
+      {body}
+    </div>
   );
 }
 
 // De lokala lagen sorterade efter placering (sorteringen görs i lib/matchday.ts).
+// Mobil: en rad att svepa i; från md-bredd ett rutnät med fem kolumner.
 export function TeamGrid({ teams }: { teams: TeamSummary[] }) {
   if (teams.length === 0) {
     return <p className="text-sm text-on-dark-muted">Inga lag eller tabeller inlästa ännu.</p>;
   }
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-      {teams.map((t) => (
-        <TeamCard key={t.teamId} team={t} />
+    <div className="-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0 md:pb-0">
+      {teams.map((t, i) => (
+        <TeamCard key={t.teamId} team={t} index={i} />
       ))}
     </div>
   );
 }
 ```
 
-- [ ] **Step 4: Typkontroll**
+- [ ] **Step 12: Typkontroll och lint**
 
-Run: `npx tsc --noEmit`
-Expected: inga fel.
+Run: `npx tsc --noEmit && npm test`
+Expected: inga typfel, alla tester PASS.
 
-- [ ] **Step 5: Commit**
+Run: `npx eslint app lib instrumentation.ts`
+Expected: inga problem i de nya filerna; högst de tre befintliga problemen.
+
+- [ ] **Step 13: Commit**
 
 ```bash
-git add app/components/home/matchday-hero.tsx app/components/home/round-strip.tsx app/components/home/team-grid.tsx
-git commit -m "feat: dark matchday zone components (featured match, round strip, team cards)"
+git add lib/matchday.ts lib/matchday.test.ts lib/team-images.ts public/images/lag/README.md app/globals.css app/components/home/ticker.tsx app/components/home/matchday-hero.tsx app/components/home/round-strip.tsx app/components/home/team-grid.tsx
+git commit -m "feat: dark matchday zone with team images, ticker and motion"
 ```
 
 ---
 
 ### Task 4: Ljusa zonen och ny startsida
+
+> Ersätter den ursprungliga Task 4 (tickern och bildhero från Task 3 kopplas in här).
 
 **Files:**
 - Create: `app/components/home/news-feed.tsx`
@@ -1456,10 +1812,10 @@ git commit -m "feat: dark matchday zone components (featured match, round strip,
 - Rewrite: `app/page.tsx`
 
 **Interfaces:**
-- Consumes: allt från Task 1–3: `matchdayMode`, `pickFeatured`, `teamSummaries`, `LocalTeamRow`, `Standing` (`@/lib/matchday`); `getMatches` (`@/lib/queries`); `MatchdayHero`, `RoundStrip`, `TeamGrid`; `SectionHeading` med `tone`; `MAX_ARTICLE_AGE_DAYS` (`@/lib/news`); `LOCAL_TEAM_IDS` (`@/lib/local-teams`).
+- Consumes: `matchdayMode`, `pickFeatured`, `teamSummaries`, `tickerItems`, `LocalTeamRow`, `Standing` (`@/lib/matchday`); `getMatches` (`@/lib/queries`); `Ticker`, `MatchdayHero`, `RoundStrip`, `TeamGrid` (Task 3); `SectionHeading` med `tone` (Task 2); `MAX_ARTICLE_AGE_DAYS` (`@/lib/news`); `LOCAL_TEAM_IDS` (`@/lib/local-teams`); CSS-klassen `reveal` (finns redan i `app/globals.css`).
 - Produces:
   - `type NewsArticle = { id: string; title: string; summary: string | null; source: string; publishedAt: Date; teamNames: string[] }` och `NewsFeed({ articles }: { articles: NewsArticle[] })` (sektion med `id="nyheter"`)
-  - `type PodEpisode = { id: string; podcast: string; title: string; durationSec: number | null; publishedAt: Date }`, `type PodcastGroup = { name: string; day: string; recent: PodEpisode[]; older: PodEpisode[] }` och `Sidebar({ leagues, podcasts }: { leagues: { id: string; name: string }[]; podcasts: PodcastGroup[] })` (poddsektion med `id="poddar"`)
+  - `type PodEpisode`, `type PodcastGroup` och `Sidebar({ leagues, podcasts })` (poddsektion med `id="poddar"`)
 
 - [ ] **Step 1: Skapa `app/components/home/news-feed.tsx`**
 
@@ -1541,7 +1897,7 @@ export function NewsFeed({ articles }: { articles: NewsArticle[] }) {
   const older = rest.slice(SHOWN - 1);
 
   return (
-    <section id="nyheter" className="scroll-mt-24">
+    <section id="nyheter" className="reveal scroll-mt-24">
       <SectionHeading count={articles.length > 0 ? `${articles.length} artiklar` : undefined}>
         Nyheter
       </SectionHeading>
@@ -1632,7 +1988,7 @@ export function Sidebar({
 }) {
   return (
     <aside className="space-y-10">
-      <section>
+      <section className="reveal">
         <SectionHeading>Serier</SectionHeading>
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-raised">
           {leagues.map((l) => (
@@ -1655,7 +2011,7 @@ export function Sidebar({
       </section>
 
       {podcasts.length > 0 && (
-        <section id="poddar" className="scroll-mt-24">
+        <section id="poddar" className="reveal scroll-mt-24">
           <SectionHeading>Poddar</SectionHeading>
           <div className="space-y-6">
             {podcasts.map((p) => (
@@ -1713,6 +2069,7 @@ import {
   matchdayMode,
   pickFeatured,
   teamSummaries,
+  tickerItems,
   type LocalTeamRow,
   type Standing,
 } from "@/lib/matchday";
@@ -1723,6 +2080,7 @@ import { NewsFeed, type NewsArticle } from "./components/home/news-feed";
 import { RoundStrip } from "./components/home/round-strip";
 import { Sidebar, type PodcastGroup } from "./components/home/sidebar";
 import { TeamGrid } from "./components/home/team-grid";
+import { Ticker } from "./components/home/ticker";
 import { SectionHeading } from "./components/section-heading";
 
 // Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
@@ -1816,6 +2174,7 @@ export default async function Home() {
   const featured = pickFeatured(modeMatches, standings, LOCAL_TEAM_IDS);
   const others = modeMatches.filter((m) => m.id !== featured?.id);
   const summaries = teamSummaries(localTeamRows as LocalTeamRow[], localMatches, now);
+  const ticker = tickerItems(localMatches, LOCAL_TEAM_IDS, now);
 
   // Nyheter: en rad per artikel med alla taggade lag
   const byArticle = new Map<string, NewsArticle>();
@@ -1839,10 +2198,11 @@ export default async function Home() {
   return (
     <>
       <section className="bg-surface-dark text-on-dark">
-        <div className="mx-auto max-w-5xl px-4 pb-10 pt-8">
-          <MatchdayHero mode={mode} featured={featured} standings={standings} />
+        <Ticker items={ticker} />
+        <MatchdayHero mode={mode} featured={featured} standings={standings} />
+        <div className="mx-auto max-w-5xl space-y-10 px-4 pb-10 pt-4">
           <RoundStrip mode={mode} matches={others} />
-          <div className="mt-10">
+          <div>
             <SectionHeading tone="dark" count={`${summaries.length} lag`}>
               Lokala lag
             </SectionHeading>
@@ -1872,11 +2232,13 @@ Expected: inga fel i `app/page.tsx` eller `app/components/home/*` (det tidigare 
 
 - [ ] **Step 5: Visuell kontroll, läget `upcoming`**
 
-Med dev-servern på port 3001 (se Task 2 Step 11), på `/`:
-- Mörk zon: etiketten "Veckans match", serie och datum, två lag med emblem, placering och poäng, grön avsparkstid; omgångsraden med övriga lokala matcher; tio lagkort sorterade efter placering med formrutor och "Nästa · <dag> <d/m>" + "hemma/borta <motståndare>".
-- Ljus zon: toppnyhet i mörkt kort med gröna lagetiketter, lista under, "Visa äldre nyheter"; sidospalt med serier och poddar.
+Med dev-servern på port 3001 (en enda instans), på `/`:
+- Tickern rullar under navigeringen och pausar vid hover.
+- Veckans match som affisch: två halvor (bild eller reserv med stort svagt emblem), mörkade mot mitten; grön avsparkstid.
+- Omgångsraden och tio lagkort med bildyta, emblem och stor placering; korten glider in ett i taget; hover lyfter kortet.
+- Ljus zon: toppnyhet i mörkt kort, lista, "Visa äldre nyheter"; sidospalt med serier och poddar; sektionerna glider in vid scroll.
 - Menylänkarna "Nyheter" och "Poddar" hoppar till rätt sektion.
-- Mobilbredd 375 px: veckans match staplad (lag – tid – lag), omgång och lagkort i två kolumner, sidospalten under nyheterna, ingen horisontell scroll.
+- Mobilbredd 375 px: lagkorten i en rad att svepa i, veckans match staplad, ingen horisontell scroll på sidan i övrigt.
 - Konsolen: inga fel.
 
 - [ ] **Step 6: Visuell kontroll, lägena `recent` och `offseason`**
@@ -1887,21 +2249,18 @@ Sista inlagda lokala matchen spelas 2026-10-04. Skapa `.env.development.local` i
 MATCHDAY_NOW=2026-10-06T12:00:00Z
 ```
 
-Next läser om env-filer i dev; ladda om `/`. Förväntat: etiketten "Senaste omgången", den mest intressanta matchen den senaste veckan stort med resultat i grönt, övriga med resultat i omgångsraden.
+Ladda om `/`. Förväntat: etiketten "Senaste omgången", mest intressanta matchen stort med resultat, övriga med resultat i omgångsraden.
 
-Ändra till `MATCHDAY_NOW=2026-10-20T12:00:00Z`, ladda om. Förväntat: rubriken "Säsongen är slut", ingen omgångsrad, lagkorten kvar.
+Ändra till `MATCHDAY_NOW=2026-10-20T12:00:00Z`, ladda om. Förväntat: "Säsongen är slut", ingen omgångsrad, lagkorten kvar, tickern dold om den saknar innehåll.
 
-Ta bort filen `.env.development.local` och ladda om; läget ska vara tillbaka till `upcoming`.
-
-Run: `git status --short`
-Expected: `.env.development.local` listas inte.
+Ta bort `.env.development.local` och ladda om; läget ska vara `upcoming` igen. `git status --short` ska inte lista filen.
 
 - [ ] **Step 7: Produktionsbygge**
 
 Stoppa dev-servern först (aldrig bygge och dev-server parallellt på den här maskinen), sedan:
 
 Run: `npx next build`
-Expected: bygget lyckas; `/` visas som statisk sida med revalidate (`○` eller `ISR`), inga typ- eller byggfel. Starta därefter dev-servern igen om den ska användas.
+Expected: bygget lyckas; `/` är statisk med revalidate, inga typ- eller byggfel. Starta dev-servern igen efteråt om den ska användas.
 
 - [ ] **Step 8: Commit**
 

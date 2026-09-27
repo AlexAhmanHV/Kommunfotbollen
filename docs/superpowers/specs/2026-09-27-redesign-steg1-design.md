@@ -179,3 +179,37 @@ i stället för teal text.
   bara lokalt, aldrig i Render. Ingen query-parameter (skulle göra sidan
   dynamisk) och databasen ändras inte.
 - `tsc`, lint (inga nya fel) och `next build` före push.
+
+## Tillägg 2026-09-27: bilder och rörelse
+
+Efter att grunden byggts beslutades att den mörka zonen ska kännas mindre
+uppstaplad. Tillägget ersätter motsvarande delar ovan där de krockar.
+
+### Lagbilder
+
+- En liggande bild per lokalt lag (minst ~1600×900), placerad som
+  `public/images/lag/<slug>.jpg`. Finns filen används den automatiskt; slug per
+  lag definieras i `lib/team-images.ts`. Bilderna levereras av användaren
+  senare — allt måste se bra ut utan dem.
+- **Veckans match som affisch:** de två lagens bilder sida vid sida som
+  bakgrund i hela zonens bredd, mörkade mot mitten och nedåt så att text syns.
+- **Lagkort med bild:** bild överst med emblem och stor placering ovanpå; namn,
+  form och nästa match under.
+- **Reserv utan bild:** mörk gradient med lagets emblem stort och svagt i
+  bakgrunden (gäller även motståndare som inte är lokala).
+
+### Rörelse
+
+Allt stängs av vid `prefers-reduced-motion: reduce`.
+
+- **Ticker** direkt under navigeringen: grön list som rullar med de senaste
+  lokala resultaten (senaste 14 dagarna, högst 8, nyast först) följt av
+  kommande lokala matcher inom 7 dagar. Pausar när muspekaren är över den.
+  Utan rörelse: stillastående rad som går att scrolla i sidled. Döljs om den
+  saknar innehåll.
+- **Långsam zoom** (Ken Burns) på bilderna i veckans match.
+- **Lagkorten glider in** ett i taget när sidan laddas; nyhets- och
+  sidospaltssektionerna glider in när man scrollar (befintlig `.reveal`).
+- **Hover på lagkort:** kortet lyfter och bilden zoomar.
+- **Mobil:** lagkorten är en rad att svepa i sidled (snap), rutnät från
+  `md`-bredd.
