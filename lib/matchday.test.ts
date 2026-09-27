@@ -6,6 +6,7 @@ import {
   matchdayMode,
   pickFeatured,
   teamSummaries,
+  tickerItems,
   type LocalTeamRow,
   type Standing,
 } from "./matchday";
@@ -168,5 +169,36 @@ describe("teamSummaries", () => {
       teamSummaries(teams, [], NOW).map((t) => t.teamId),
       ["L2", "L1", "L3"],
     );
+  });
+});
+
+describe("tickerItems", () => {
+  it("senaste resultaten nyast först, sedan kommande inom 7 dagar i tidsordning", () => {
+    const older = match({ homeId: "L1", status: "FINISHED", startsAt: at(-6), homeScore: 1, awayScore: 0 });
+    const newer = match({ awayId: "L2", status: "FINISHED", startsAt: at(-1), homeScore: 2, awayScore: 2 });
+    const later = match({ homeId: "L2", startsAt: at(5) });
+    const sooner = match({ homeId: "L1", startsAt: at(2) });
+    const items = tickerItems([older, later, newer, sooner], LOCAL, NOW);
+    assert.deepEqual(
+      items.map((i) => [i.kind, i.match.id]),
+      [
+        ["result", newer.id],
+        ["result", older.id],
+        ["upcoming", sooner.id],
+        ["upcoming", later.id],
+      ],
+    );
+  });
+  it("utelämnar icke-lokala matcher, resultat äldre än 14 dagar och kommande bortom 7 dagar", () => {
+    const other = match({ status: "FINISHED", startsAt: at(-1), homeScore: 1, awayScore: 1 });
+    const old = match({ homeId: "L1", status: "FINISHED", startsAt: at(-15), homeScore: 3, awayScore: 0 });
+    const far = match({ homeId: "L1", startsAt: at(8) });
+    assert.deepEqual(tickerItems([other, old, far], LOCAL, NOW), []);
+  });
+  it("högst 8 resultat", () => {
+    const results = Array.from({ length: 10 }, (_, i) =>
+      match({ homeId: "L1", status: "FINISHED", startsAt: at(-1 - i), homeScore: 1, awayScore: 0 }),
+    );
+    assert.equal(tickerItems(results, LOCAL, NOW).length, 8);
   });
 });

@@ -140,3 +140,39 @@ export function teamSummaries(
       (a.position ?? Infinity) - (b.position ?? Infinity) || a.name.localeCompare(b.name, "sv"),
   );
 }
+
+export type TickerItem = { kind: "result" | "upcoming"; match: UiMatch };
+
+const TICKER_RESULT_DAYS = 14;
+const TICKER_MAX_RESULTS = 8;
+
+/** Tickern: senaste lokala resultaten (nyast först) följt av kommande lokala matcher inom 7 dagar. */
+export function tickerItems(
+  matches: UiMatch[],
+  localIds: ReadonlySet<string>,
+  now: Date,
+): TickerItem[] {
+  const t = now.getTime();
+  const local = matches.filter((m) => isLocalMatch(m, localIds));
+  const results = local
+    .filter(
+      (m) =>
+        m.status === "FINISHED" &&
+        m.startsAt.getTime() <= t &&
+        m.startsAt.getTime() >= t - TICKER_RESULT_DAYS * DAY_MS,
+    )
+    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())
+    .slice(0, TICKER_MAX_RESULTS);
+  const upcoming = local
+    .filter(
+      (m) =>
+        m.status === "UPCOMING" &&
+        m.startsAt.getTime() >= t &&
+        m.startsAt.getTime() <= t + WINDOW_MS,
+    )
+    .sort(byStart);
+  return [
+    ...results.map((match): TickerItem => ({ kind: "result", match })),
+    ...upcoming.map((match): TickerItem => ({ kind: "upcoming", match })),
+  ];
+}

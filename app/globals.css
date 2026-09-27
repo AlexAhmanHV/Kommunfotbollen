@@ -112,3 +112,64 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Redesign steg 1: rörelse på startsidan. Allt står still vid
+   prefers-reduced-motion. */
+@keyframes ticker-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.12) translate(-2%, -1%);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ticker-track {
+    animation: ticker-scroll var(--ticker-duration, 40s) linear infinite;
+  }
+  .ticker:hover .ticker-track {
+    animation-play-state: paused;
+  }
+  .kenburns {
+    animation: kenburns 16s ease-in-out infinite alternate;
+  }
+  .rise {
+    animation: rise 0.55s ease-out both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+
+/* Utan rörelse: tickern står still och går att scrolla i sidled; dubbletten
+   som behövs för den sömlösa loopen döljs. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    overflow-x: auto;
+  }
+  .ticker-dup {
+    display: none;
+  }
+}
+
+/* Mörkläggning över lagbilderna i Veckans match: mörkast i mitten (där tiden
+   står) och nedåt mot resten av zonen. */
+.hero-shade {
+  background:
+    linear-gradient(90deg, rgb(14 17 22 / 0.45), rgb(14 17 22 / 0.88) 50%, rgb(14 17 22 / 0.45)),
+    linear-gradient(0deg, #0e1116, transparent 60%);
+}
