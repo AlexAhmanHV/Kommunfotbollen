@@ -169,10 +169,9 @@ export function latestRowPerTeam<T extends { teamId: string; computedAt: Date | 
 
 export type TickerItem = { kind: "result" | "upcoming"; match: UiMatch };
 
-const TICKER_RESULT_DAYS = 14;
-const TICKER_MAX_RESULTS = 8;
-
-/** Tickern: senaste lokala resultaten (nyast först) följt av kommande lokala matcher inom 7 dagar. */
+/** Tickern: för varje lokalt lag dess senaste spelade match och dess nästa
+ * match (en derby mellan två lokala lag räknas bara en gång). Resultat
+ * sorteras nyast först, kommande matcher tidigast först. */
 export function tickerItems(
   matches: UiMatch[],
   localIds: ReadonlySet<string>,
@@ -180,23 +179,26 @@ export function tickerItems(
 ): TickerItem[] {
   const t = now.getTime();
   const local = matches.filter((m) => isLocalMatch(m, localIds));
-  const results = local
-    .filter(
-      (m) =>
-        m.status === "FINISHED" &&
-        m.startsAt.getTime() <= t &&
-        m.startsAt.getTime() >= t - TICKER_RESULT_DAYS * DAY_MS,
-    )
-    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())
-    .slice(0, TICKER_MAX_RESULTS);
-  const upcoming = local
-    .filter(
-      (m) =>
-        m.status === "UPCOMING" &&
-        m.startsAt.getTime() >= t &&
-        m.startsAt.getTime() <= t + WINDOW_MS,
-    )
-    .sort(byStart);
+
+  const resultsById = new Map<string, UiMatch>();
+  const upcomingById = new Map<string, UiMatch>();
+  for (const id of localIds) {
+    const own = local.filter((m) => m.homeId === id || m.awayId === id);
+
+    const latest = own
+      .filter((m) => m.status === "FINISHED" && m.startsAt.getTime() <= t)
+      .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0];
+    if (latest) resultsById.set(latest.id, latest);
+
+    const next = own
+      .filter((m) => m.status === "UPCOMING" && m.startsAt.getTime() >= t)
+      .sort(byStart)[0];
+    if (next) upcomingById.set(next.id, next);
+  }
+
+  const results = [...resultsById.values()].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
+  const upcoming = [...upcomingById.values()].sort(byStart);
+
   return [
     ...results.map((match): TickerItem => ({ kind: "result", match })),
     ...upcoming.map((match): TickerItem => ({ kind: "upcoming", match })),

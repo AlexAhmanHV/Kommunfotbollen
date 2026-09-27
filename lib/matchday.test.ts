@@ -174,33 +174,59 @@ describe("teamSummaries", () => {
 });
 
 describe("tickerItems", () => {
-  it("senaste resultaten nyast först, sedan kommande inom 7 dagar i tidsordning", () => {
-    const older = match({ homeId: "L1", status: "FINISHED", startsAt: at(-6), homeScore: 1, awayScore: 0 });
-    const newer = match({ awayId: "L2", status: "FINISHED", startsAt: at(-1), homeScore: 2, awayScore: 2 });
-    const later = match({ homeId: "L2", startsAt: at(5) });
-    const sooner = match({ homeId: "L1", startsAt: at(2) });
-    const items = tickerItems([older, later, newer, sooner], LOCAL, NOW);
+  it("varje lags senaste resultat och nästa match, äldre resultat och senare matcher uteslutna", () => {
+    const oldResult = match({ homeId: "L1", status: "FINISHED", startsAt: at(-6), homeScore: 1, awayScore: 0 });
+    const latestResult = match({ homeId: "L1", status: "FINISHED", startsAt: at(-2), homeScore: 3, awayScore: 1 });
+    const nextMatch = match({ homeId: "L1", startsAt: at(2) });
+    const laterMatch = match({ homeId: "L1", startsAt: at(5) });
+    const items = tickerItems([oldResult, latestResult, nextMatch, laterMatch], LOCAL, NOW);
     assert.deepEqual(
       items.map((i) => [i.kind, i.match.id]),
       [
-        ["result", newer.id],
-        ["result", older.id],
-        ["upcoming", sooner.id],
-        ["upcoming", later.id],
+        ["result", latestResult.id],
+        ["upcoming", nextMatch.id],
       ],
     );
   });
-  it("utelämnar icke-lokala matcher, resultat äldre än 14 dagar och kommande bortom 7 dagar", () => {
-    const other = match({ status: "FINISHED", startsAt: at(-1), homeScore: 1, awayScore: 1 });
-    const old = match({ homeId: "L1", status: "FINISHED", startsAt: at(-15), homeScore: 3, awayScore: 0 });
-    const far = match({ homeId: "L1", startsAt: at(8) });
-    assert.deepEqual(tickerItems([other, old, far], LOCAL, NOW), []);
-  });
-  it("högst 8 resultat", () => {
-    const results = Array.from({ length: 10 }, (_, i) =>
-      match({ homeId: "L1", status: "FINISHED", startsAt: at(-1 - i), homeScore: 1, awayScore: 0 }),
+  it("en derby (två lokala lag) förekommer bara en gång", () => {
+    const derbyResult = match({ homeId: "L1", awayId: "L2", status: "FINISHED", startsAt: at(-1), homeScore: 2, awayScore: 1 });
+    const derbyUpcoming = match({ homeId: "L2", awayId: "L1", startsAt: at(3) });
+    const items = tickerItems([derbyResult, derbyUpcoming], LOCAL, NOW);
+    assert.deepEqual(
+      items.map((i) => [i.kind, i.match.id]),
+      [
+        ["result", derbyResult.id],
+        ["upcoming", derbyUpcoming.id],
+      ],
     );
-    assert.equal(tickerItems(results, LOCAL, NOW).length, 8);
+  });
+  it("ordning: alla resultat nyast först, sedan alla kommande tidigast först", () => {
+    const l1Result = match({ homeId: "L1", status: "FINISHED", startsAt: at(-5), homeScore: 1, awayScore: 0 });
+    const l2Result = match({ homeId: "L2", status: "FINISHED", startsAt: at(-1), homeScore: 2, awayScore: 2 });
+    const l1Upcoming = match({ homeId: "L1", startsAt: at(6) });
+    const l2Upcoming = match({ homeId: "L2", startsAt: at(2) });
+    const items = tickerItems([l1Result, l2Result, l1Upcoming, l2Upcoming], LOCAL, NOW);
+    assert.deepEqual(
+      items.map((i) => [i.kind, i.match.id]),
+      [
+        ["result", l2Result.id],
+        ["result", l1Result.id],
+        ["upcoming", l2Upcoming.id],
+        ["upcoming", l1Upcoming.id],
+      ],
+    );
+  });
+  it("lag utan kommande match bidrar bara med sitt resultat", () => {
+    const result = match({ homeId: "L1", status: "FINISHED", startsAt: at(-3), homeScore: 1, awayScore: 0 });
+    assert.deepEqual(
+      tickerItems([result], LOCAL, NOW).map((i) => [i.kind, i.match.id]),
+      [["result", result.id]],
+    );
+  });
+  it("utelämnar icke-lokala matcher", () => {
+    const other = match({ status: "FINISHED", startsAt: at(-1), homeScore: 1, awayScore: 1 });
+    const otherUpcoming = match({ startsAt: at(2) });
+    assert.deepEqual(tickerItems([other, otherUpcoming], LOCAL, NOW), []);
   });
 });
 

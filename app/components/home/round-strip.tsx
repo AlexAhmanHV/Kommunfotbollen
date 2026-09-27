@@ -10,6 +10,11 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   minute: "2-digit",
   timeZone: "Europe/Stockholm",
 });
+const dayMonthFmt = new Intl.DateTimeFormat("sv-SE", {
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Europe/Stockholm",
+});
 
 // "Division 4 Småland norra" → "Div 4"
 function shortLeague(name: string): string {
@@ -39,7 +44,8 @@ export function RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiM
             </span>
           </div>
           <p className="mt-0.5 text-xs text-on-dark-muted">
-            {shortLeague(m.leagueName)} · {weekdayFmt.format(m.startsAt)}
+            {shortLeague(m.leagueName)} · {weekdayFmt.format(m.startsAt)}{" "}
+            {dayMonthFmt.format(m.startsAt)}
           </p>
         </li>
       ))}

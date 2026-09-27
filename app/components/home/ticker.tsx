@@ -39,8 +39,9 @@ function Row({ items, duplicate }: { items: RepeatedItem[]; duplicate?: boolean 
   );
 }
 
-// Rullande list med senaste resultat och kommande avspark. Innehållet står
-// två gånger i rad så att loopen blir sömlös (animationen flyttar -50 %).
+// Rullande list med varje lokalt lags senaste resultat och nästa avspark.
+// Innehållet står två gånger i rad så att loopen blir sömlös (animationen
+// flyttar -50 %).
 // Går att pausa utan mus: kryssrutan längst till höger (WCAG 2.2.2), annars
 // pausar hover eller tangentbordsfokus i listan.
 export function Ticker({ items }: { items: TickerItem[] }) {
