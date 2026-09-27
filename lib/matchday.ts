@@ -27,6 +27,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_MS = 7 * DAY_MS;
 const FORM_LENGTH = 5;
 
+/** Resultattext, eller "–" i stället för "null–null" om ett mål saknas. */
+export function scoreText(home: number | null, away: number | null): string {
+  return `${home ?? "–"}–${away ?? "–"}`;
+}
+
 const byStart = (a: UiMatch, b: UiMatch) => a.startsAt.getTime() - b.startsAt.getTime();
 
 /** Står som kommande ett dygn efter avspark: källan har inget resultat. */

@@ -1,5 +1,5 @@
 import type { UiMatch } from "@/lib/queries";
-import type { MatchdayMode } from "@/lib/matchday";
+import { scoreText, type MatchdayMode } from "@/lib/matchday";
 
 const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
   weekday: "short",
@@ -20,11 +20,6 @@ const dayMonthFmt = new Intl.DateTimeFormat("sv-SE", {
 function shortLeague(name: string): string {
   const m = name.match(/^Division (\d+)/);
   return m ? `Div ${m[1]}` : name;
-}
-
-/** Resultattext, eller "–" i stället för "null–null" om ett mål saknas. */
-function scoreText(home: number | null, away: number | null): string {
-  return `${home ?? "–"}–${away ?? "–"}`;
 }
 
 // Omgångens övriga lokala matcher: tid före avspark, resultat i läget "recent".

@@ -1,4 +1,4 @@
-import type { TickerItem } from "@/lib/matchday";
+import { scoreText, type TickerItem } from "@/lib/matchday";
 
 const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
   weekday: "short",
@@ -34,7 +34,7 @@ function Row({ items, duplicate }: { items: RepeatedItem[]; duplicate?: boolean 
         >
           {kind === "result" ? (
             <>
-              {m.homeName} <span className="font-extrabold">{m.homeScore}–{m.awayScore}</span> {m.awayName}
+              {m.homeName} <span className="font-extrabold">{scoreText(m.homeScore, m.awayScore)}</span> {m.awayName}
             </>
           ) : (
             <>

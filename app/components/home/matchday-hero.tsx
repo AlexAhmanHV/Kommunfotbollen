@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { UiMatch } from "@/lib/queries";
-import type { MatchdayMode, Standing } from "@/lib/matchday";
+import { scoreText, type MatchdayMode, type Standing } from "@/lib/matchday";
 import { teamImage } from "@/lib/team-images";
 import { TeamCrest } from "../team-crest";
 
@@ -15,11 +15,6 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   minute: "2-digit",
   timeZone: "Europe/Stockholm",
 });
-
-/** Resultattext, eller "–" i stället för "null–null" om ett mål saknas. */
-function scoreText(home: number | null, away: number | null): string {
-  return `${home ?? "–"}–${away ?? "–"}`;
-}
 
 // Ena halvan av affischen: lagbilden med långsam zoom, eller en mörk gradient
 // med lagets emblem stort och svagt när bild saknas.

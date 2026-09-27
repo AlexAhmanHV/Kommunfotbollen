@@ -6,6 +6,7 @@ import {
   latestRowPerTeam,
   matchdayMode,
   pickFeatured,
+  scoreText,
   teamSummaries,
   tickerItems,
   type LocalTeamRow,
@@ -250,5 +251,15 @@ describe("latestRowPerTeam", () => {
     const l1 = { teamId: "L1", computedAt: at(-1) };
     const l2 = { teamId: "L2", computedAt: null };
     assert.deepEqual(latestRowPerTeam([l1, l2]), [l1, l2]);
+  });
+});
+
+describe("scoreText", () => {
+  it("visar resultatet", () => {
+    assert.equal(scoreText(4, 1), "4–1");
+  });
+  it("saknat mål blir ett streck i stället för null", () => {
+    assert.equal(scoreText(null, 2), "––2");
+    assert.equal(scoreText(null, null), "–––");
   });
 });
