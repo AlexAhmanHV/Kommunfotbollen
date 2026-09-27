@@ -119,8 +119,8 @@ utgår som accenter.
 Formrutor: V = `accent` med mörk text, O = `#4a515c` med ljus text, F =
 `line-dark` med dämpad text.
 
-**Lokala lag** markeras med fetstil + ett kort grönt streck framför namnet
-(fungerar på både ljust och mörkt) i stället för teal text.
+**Lokala lag** markeras med fetstil
+i stället för teal text.
 
 ### Typografi
 

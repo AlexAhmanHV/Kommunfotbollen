@@ -25,18 +25,27 @@ function formatScorers(players: string[]): string {
     .join(", ");
 }
 
-// Lagnamn; lokala lag i fetstil med ett kort grönt streck framför.
+// Lagnamn; lokala lag i fetstil.
 function TeamName({ id, name, align }: { id: string; name: string; align: "left" | "right" }) {
-  const local = isLocalTeam(id);
   return (
     <span
-      className={`flex min-w-0 items-center gap-1.5 ${align === "right" ? "justify-end" : ""} ${
-        local ? "font-semibold text-ink" : "text-ink"
+      className={`min-w-0 truncate text-ink ${align === "right" ? "text-right" : ""} ${
+        isLocalTeam(id) ? "font-bold" : ""
       }`}
     >
-      {local && <span className="h-3 w-1 shrink-0 rounded-sm bg-accent" aria-hidden />}
-      <span className="truncate">{name}</span>
+      {name}
     </span>
+  );
+}
+
+// Notisrad under en match, centrerad under resultatkolumnen (samma
+// kolumnindelning som matchraden: datum | hemmalag | resultat | bortalag).
+function RowNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-1.5 flex gap-3 text-[11px] leading-snug text-ink-muted">
+      <span className="w-14 shrink-0" aria-hidden />
+      <p className="flex-1 text-center">{children}</p>
+    </div>
   );
 }
 
@@ -107,17 +116,9 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
               </div>
             )}
 
-            {resultMissing && (
-              <p className="mt-1.5 text-center text-[11px] leading-snug text-ink-muted">
-                Resultat saknas
-              </p>
-            )}
+            {resultMissing && <RowNote>Resultat saknas</RowNote>}
 
-            {scorersMissing && (
-              <p className="mt-1.5 text-center text-[11px] leading-snug text-ink-muted">
-                Målskyttar ej rapporterade
-              </p>
-            )}
+            {scorersMissing && <RowNote>Målskyttar ej rapporterade</RowNote>}
           </li>
         );
       })}

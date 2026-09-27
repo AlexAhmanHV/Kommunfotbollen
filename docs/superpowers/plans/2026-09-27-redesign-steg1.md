@@ -15,7 +15,7 @@
 - Signaturfärg `accent` = `#c6f432`. Får vara **text** på mörka ytor, bara **fyllning** på ljusa (med `ink`-text ovanpå).
 - Mörka tokens: `surface-dark #0e1116`, `surface-dark-raised #171b22`, `line-dark #2a2f38`, `on-dark #f2f2f0`, `on-dark-muted #9aa0a8`. Ljusa: `surface #f4f2f2`, `surface-raised #fbfafa`, `line #e4e2e3`, `ink #1d2128`, `ink-muted #565459`. Formruta "O": `form-draw #4a515c`.
 - Typsnitt: **Barlow Condensed** (600/700/800) för lagnamn, siffror, sektionsrubriker, lagetiketter, toppnyhetens rubrik (Tailwind-klass `font-display`). **Geist** för brödtext. Geist Mono används inte i ny kod.
-- Lokala lag markeras med fetstil + kort grönt streck framför namnet (inte teal-text).
+- Lokala lag markeras med fetstil (inte teal-text, inget grönt streck).
 - De gamla tokens (`neutral-*`, `emerald-*`, `brand` i `app/globals.css`) **tas inte bort** i det här steget; ny kod använder dem inte.
 - Veckans match: fönster 7 dagar. Derby (båda lagen lokala) vinner, flera derbyn → tidigast. Annars bästa (lägsta) tabellplacering för ett lokalt lag, lika → tidigast avspark.
 - Lägen: `upcoming` → `recent` → `offseason` enligt specens tabell. Matcher där `isResultMissing` är sann räknas inte.
