@@ -41,10 +41,8 @@ Båda uppgifterna är medvetet snävt avgränsade: en AI-uppgift per beslut, med
 ## Arkitektur i korthet
 
 ```
-GitHub Actions (cron var 15:e min / dagligen)
-                    │
-                    ▼
-     POST /api/sync — autentiserad med CRON_SECRET
+Schemalagda jobb i appen (instrumentation.ts)
+   matcher var 15:e min · nyheter kl 22:00
                     │
                     ▼
 Everysport, lokaltidningar, Google News, poddflöden
@@ -59,7 +57,7 @@ Everysport, lokaltidningar, Google News, poddflöden
           Next.js Server Components
 ```
 
-Driften är källagnostisk och stateless: GitHub Actions anropar den autentiserade `/api/sync`-endpointen på schema (matcher var 15:e minut, nyheter/poddar dagligen), appen själv har inget eget minne av vad som redan körts. Det gör att appen kan köras på Render Free-nivån — ingen betald instans, ingen persistent disk, bara en webbtjänst som svarar på anrop och en extern databas.
+Appen är sin egen cron: `instrumentation.ts` startar matchsynken var 15:e minut och nyheter/poddar kl 22:00 svensk tid. All data ligger i en extern databas, så inget går förlorat vid omstart. Appen körs på Render Free-nivån och hålls vaken av en extern ping (cron-job.org) mot `/api/health` var 10:e minut — annars somnar instansen och de schemalagda jobben stannar.
 
 ## Köra lokalt
 
@@ -72,7 +70,7 @@ npm run dev
 
 Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbedömning och målskytte-extraktion — utan den körs matcher/tabeller som vanligt, men nyheter/målskyttar hoppas över. Sätt även `DATABASE_URL` mot en Postgres-instans (Supabase eller lokal).
 
-`/api/sync` kan anropas manuellt (`?target=matches` / `?target=news`, eller inget för allt) för att köra synkjobb direkt, som backup eller för felsökning. I produktion krävs `Authorization: Bearer <CRON_SECRET>` — lokalt hoppas kontrollen över om `CRON_SECRET` inte är satt.
+`/api/sync` kan anropas manuellt (`?target=matches` / `?target=news`, eller inget för allt) för att köra synkjobb direkt, som backup eller för felsökning — enklast via GitHub Actions-workflowen *Sync* (manuell körning). I produktion krävs `Authorization: Bearer <CRON_SECRET>` — lokalt hoppas kontrollen över om `CRON_SECRET` inte är satt.
 
 ## Bakgrund
 

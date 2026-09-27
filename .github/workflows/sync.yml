@@ -1,9 +1,8 @@
 name: Sync
 
+# Manuell körning av /api/sync. Den schemalagda synken sköts av appen själv
+# (instrumentation.ts); ett schema här skulle köra allt dubbelt.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
-    - cron: '0 20 * * *'
   workflow_dispatch:
     inputs:
       target:
@@ -16,20 +15,10 @@ on:
           - news
 
 jobs:
-  sync-matches:
-    if: github.event.schedule == '*/15 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.target == 'matches')
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger match sync
+      - name: Trigger sync
         run: |
-          curl -sf -X POST "${{ vars.RENDER_URL }}/api/sync?target=matches" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
-
-  sync-news:
-    if: github.event.schedule == '0 20 * * *' || (github.event_name == 'workflow_dispatch' && inputs.target == 'news')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger news sync
-        run: |
-          curl -sf -X POST "${{ vars.RENDER_URL }}/api/sync?target=news" \
+          curl -sf -X POST "${{ vars.RENDER_URL }}/api/sync?target=${{ inputs.target }}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
