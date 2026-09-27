@@ -48,7 +48,7 @@ export function FormBadges({ form }: { form: FormLetter[] }) {
 }
 
 function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
-  const image = teamImage(team.teamId);
+  const image = teamImage(team.teamId, "small");
   const body = (
     <>
       <div className="relative h-24 overflow-hidden">
@@ -57,7 +57,7 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
             src={image}
             alt=""
             fill
-            sizes="(min-width: 768px) 20vw, 70vw"
+            unoptimized
             className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-110"
           />
         ) : (

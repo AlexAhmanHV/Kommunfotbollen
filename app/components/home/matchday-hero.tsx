@@ -23,7 +23,7 @@ function HeroHalf({ teamId, name, logoUrl }: { teamId: string; name: string; log
   return (
     <div className="relative overflow-hidden">
       {image ? (
-        <Image src={image} alt="" fill sizes="50vw" className="kenburns object-cover" />
+        <Image src={image} alt="" fill unoptimized className="kenburns object-cover" />
       ) : (
         <div
           className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,var(--color-line-dark),var(--color-surface-dark))]"

@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Brainstorming-mockups (superpowers visual companion)
 .superpowers/
+
+# Original-lagbilder (förminskade versioner ligger i public/images/lag)
+/bilder/

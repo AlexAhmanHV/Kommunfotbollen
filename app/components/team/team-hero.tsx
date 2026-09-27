@@ -13,7 +13,7 @@ export function TeamHero({ team, teamClass }: { team: TeamSummary; teamClass: st
     <div className="relative isolate overflow-hidden">
       <div className="absolute inset-0 -z-10">
         {image ? (
-          <Image src={image} alt="" fill sizes="100vw" className="kenburns object-cover" />
+          <Image src={image} alt="" fill unoptimized className="kenburns object-cover" />
         ) : (
           <div
             className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,var(--color-line-dark),var(--color-surface-dark))]"
