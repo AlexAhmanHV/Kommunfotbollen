@@ -141,6 +141,32 @@ export function teamSummaries(
   );
 }
 
+/** En rad per lag (t.ex. tableRows kan ha en kvarglömd rad från en grupp laget
+ * lämnat): behåller raden med senast computedAt, null förlorar alltid mot en
+ * daterad rad, och vid oavgjort (allt null) behålls den första. Ordningen på
+ * de kvarvarande raderna följer indata. */
+export function latestRowPerTeam<T extends { teamId: string; computedAt: Date | null }>(
+  rows: T[],
+): T[] {
+  const bestIndex = new Map<string, number>();
+  rows.forEach((row, i) => {
+    const currentBest = bestIndex.get(row.teamId);
+    if (currentBest === undefined) {
+      bestIndex.set(row.teamId, i);
+      return;
+    }
+    const best = rows[currentBest];
+    if (
+      row.computedAt !== null &&
+      (best.computedAt === null || row.computedAt.getTime() > best.computedAt.getTime())
+    ) {
+      bestIndex.set(row.teamId, i);
+    }
+  });
+  const keepIndices = new Set(bestIndex.values());
+  return rows.filter((_, i) => keepIndices.has(i));
+}
+
 export type TickerItem = { kind: "result" | "upcoming"; match: UiMatch };
 
 const TICKER_RESULT_DAYS = 14;

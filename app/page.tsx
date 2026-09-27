@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/schema";
 import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
 import {
+  latestRowPerTeam,
   matchdayMode,
   pickFeatured,
   teamSummaries,
@@ -67,6 +68,7 @@ export default async function Home() {
           leagueName: leagues.name,
           position: tableRows.position,
           pts: tableRows.pts,
+          computedAt: tableRows.computedAt,
         })
         .from(teams)
         .leftJoin(tableRows, eq(tableRows.teamId, teams.id))
@@ -74,7 +76,12 @@ export default async function Home() {
         .leftJoin(leagues, eq(groups.leagueId, leagues.id))
         .where(inArray(teams.id, localIds)),
       db
-        .select({ teamId: tableRows.teamId, position: tableRows.position, pts: tableRows.pts })
+        .select({
+          teamId: tableRows.teamId,
+          position: tableRows.position,
+          pts: tableRows.pts,
+          computedAt: tableRows.computedAt,
+        })
         .from(tableRows),
       getMatches({
         where: or(inArray(matches.homeTeamId, localIds), inArray(matches.awayTeamId, localIds)),
@@ -112,14 +119,20 @@ export default async function Home() {
         .orderBy(desc(podcastEpisodes.publishedAt)),
     ]);
 
-  // Matchdagszonen
+  // Matchdagszonen. En tabellrad per lag — annars kan ett lag med en
+  // kvarglömd rad från en grupp det lämnat dyka upp dubbelt eller ge en
+  // godtycklig placering i standings-kartan.
   const standings = new Map<string, Standing>(
-    standingRows.map((r) => [r.teamId, { position: r.position, pts: r.pts }]),
+    latestRowPerTeam(standingRows).map((r) => [r.teamId, { position: r.position, pts: r.pts }]),
   );
   const { mode, matches: modeMatches } = matchdayMode(localMatches, LOCAL_TEAM_IDS, now);
   const featured = pickFeatured(modeMatches, standings, LOCAL_TEAM_IDS);
   const others = modeMatches.filter((m) => m.id !== featured?.id);
-  const summaries = teamSummaries(localTeamRows as LocalTeamRow[], localMatches, now);
+  const summaries = teamSummaries(
+    latestRowPerTeam(localTeamRows) as LocalTeamRow[],
+    localMatches,
+    now,
+  );
   const ticker = tickerItems(localMatches, LOCAL_TEAM_IDS, now);
 
   // Nyheter: en rad per artikel med alla taggade lag

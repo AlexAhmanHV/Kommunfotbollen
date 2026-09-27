@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { UiMatch } from "./queries";
 import {
   isResultMissing,
+  latestRowPerTeam,
   matchdayMode,
   pickFeatured,
   teamSummaries,
@@ -200,5 +201,30 @@ describe("tickerItems", () => {
       match({ homeId: "L1", status: "FINISHED", startsAt: at(-1 - i), homeScore: 1, awayScore: 0 }),
     );
     assert.equal(tickerItems(results, LOCAL, NOW).length, 8);
+  });
+});
+
+describe("latestRowPerTeam", () => {
+  it("dubblett: behåller raden med senast computedAt", () => {
+    const older = { teamId: "L1", computedAt: at(-2) };
+    const newer = { teamId: "L1", computedAt: at(-1) };
+    assert.deepEqual(latestRowPerTeam([older, newer]), [newer]);
+    assert.deepEqual(latestRowPerTeam([newer, older]), [newer]);
+  });
+  it("null computedAt förlorar mot en daterad rad", () => {
+    const dated = { teamId: "L1", computedAt: at(-1) };
+    const undated = { teamId: "L1", computedAt: null };
+    assert.deepEqual(latestRowPerTeam([undated, dated]), [dated]);
+    assert.deepEqual(latestRowPerTeam([dated, undated]), [dated]);
+  });
+  it("alla null: behåller första", () => {
+    const first = { teamId: "L1", computedAt: null };
+    const second = { teamId: "L1", computedAt: null };
+    assert.deepEqual(latestRowPerTeam([first, second]), [first]);
+  });
+  it("lag med en enda rad passerar oförändrat och i ordning", () => {
+    const l1 = { teamId: "L1", computedAt: at(-1) };
+    const l2 = { teamId: "L2", computedAt: null };
+    assert.deepEqual(latestRowPerTeam([l1, l2]), [l1, l2]);
   });
 });
