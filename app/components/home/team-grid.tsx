@@ -13,6 +13,11 @@ const dayMonthFmt = new Intl.DateTimeFormat("sv-SE", {
   month: "numeric",
   timeZone: "Europe/Stockholm",
 });
+const timeFmt = new Intl.DateTimeFormat("sv-SE", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Stockholm",
+});
 
 const FORM_STYLE: Record<FormLetter, string> = {
   V: "bg-accent text-surface-dark",
@@ -25,13 +30,13 @@ function Form({ form }: { form: FormLetter[] }) {
   if (form.length === 0) return null;
   return (
     <div
+      role="img"
       className="mt-2 flex gap-1"
       aria-label={`Form, senaste matcherna: ${form.map((f) => FORM_LABEL[f]).join(", ")}`}
     >
       {form.map((f, i) => (
         <span
           key={i}
-          title={FORM_LABEL[f]}
           className={`grid h-4 w-4 place-items-center rounded-[3px] text-[9px] font-bold ${FORM_STYLE[f]}`}
         >
           {f}
@@ -55,7 +60,10 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
             className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-110"
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]">
+          <div
+            className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]"
+            aria-hidden
+          >
             <div className="opacity-15">
               <TeamCrest name={team.name} logoUrl={team.logoUrl} size={80} />
             </div>
@@ -81,7 +89,8 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
           {team.next ? (
             <>
               <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                Nästa · {weekdayFmt.format(team.next.startsAt)} {dayMonthFmt.format(team.next.startsAt)}
+                Nästa · {weekdayFmt.format(team.next.startsAt)} {dayMonthFmt.format(team.next.startsAt)}{" "}
+                {timeFmt.format(team.next.startsAt)}
               </span>
               <span className="truncate text-sm font-semibold text-on-dark">
                 <span className="font-normal text-on-dark-muted">{team.next.home ? "hemma" : "borta"}</span>{" "}

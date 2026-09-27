@@ -4,6 +4,11 @@ const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
   weekday: "short",
   timeZone: "Europe/Stockholm",
 });
+const dayMonthFmt = new Intl.DateTimeFormat("sv-SE", {
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Europe/Stockholm",
+});
 const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   hour: "2-digit",
   minute: "2-digit",
@@ -22,7 +27,10 @@ function Row({ items, duplicate }: { items: RepeatedItem[]; duplicate?: boolean 
       {items.map(({ item: { kind, match: m }, rep }) => (
         <li
           key={`${rep}-${kind}-${m.id}`}
-          className="px-5 py-1.5 font-display text-sm font-bold uppercase tracking-wide"
+          className={`px-5 py-1.5 font-display text-sm font-bold uppercase tracking-wide ${
+            !duplicate && rep > 0 ? "ticker-rep" : ""
+          }`}
+          aria-hidden={!duplicate && rep > 0 ? true : undefined}
         >
           {kind === "result" ? (
             <>
@@ -30,7 +38,8 @@ function Row({ items, duplicate }: { items: RepeatedItem[]; duplicate?: boolean 
             </>
           ) : (
             <>
-              {weekdayFmt.format(m.startsAt)} {timeFmt.format(m.startsAt)} · {m.homeName} – {m.awayName}
+              {weekdayFmt.format(m.startsAt)} {dayMonthFmt.format(m.startsAt)}{" "}
+              {timeFmt.format(m.startsAt)} · {m.homeName} – {m.awayName}
             </>
           )}
         </li>
@@ -55,7 +64,7 @@ export function Ticker({ items }: { items: TickerItem[] }) {
   ).flat();
 
   return (
-    <div
+    <section
       className="ticker flex items-stretch bg-accent text-surface-dark"
       aria-label="Senaste resultat och kommande matcher"
     >
@@ -77,6 +86,6 @@ export function Ticker({ items }: { items: TickerItem[] }) {
           ▶
         </span>
       </label>
-    </div>
+    </section>
   );
 }

@@ -16,6 +16,11 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",
 });
 
+/** Resultattext, eller "–" i stället för "null–null" om ett mål saknas. */
+function scoreText(home: number | null, away: number | null): string {
+  return `${home ?? "–"}–${away ?? "–"}`;
+}
+
 // Ena halvan av affischen: lagbilden med långsam zoom, eller en mörk gradient
 // med lagets emblem stort och svagt när bild saknas.
 function HeroHalf({ teamId, name, logoUrl }: { teamId: string; name: string; logoUrl: string | null }) {
@@ -25,7 +30,10 @@ function HeroHalf({ teamId, name, logoUrl }: { teamId: string; name: string; log
       {image ? (
         <Image src={image} alt="" fill sizes="50vw" className="kenburns object-cover" />
       ) : (
-        <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]">
+        <div
+          className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]"
+          aria-hidden
+        >
           <div className="opacity-15">
             <TeamCrest name={name} logoUrl={logoUrl} size={160} />
           </div>
@@ -89,11 +97,17 @@ export function MatchdayHero({
 
   const center =
     mode === "recent"
-      ? `${featured.homeScore}–${featured.awayScore}`
+      ? scoreText(featured.homeScore, featured.awayScore)
       : timeFmt.format(featured.startsAt);
+
+  const h1Text =
+    mode === "recent"
+      ? `Senaste omgången: ${featured.homeName} mot ${featured.awayName}`
+      : `Veckans match: ${featured.homeName} mot ${featured.awayName}`;
 
   return (
     <div className="relative isolate overflow-hidden">
+      <h1 className="sr-only">{h1Text}</h1>
       <div className="absolute inset-0 -z-10 grid grid-cols-2">
         <HeroHalf teamId={featured.homeId} name={featured.homeName} logoUrl={featured.homeLogo} />
         <HeroHalf teamId={featured.awayId} name={featured.awayName} logoUrl={featured.awayLogo} />

@@ -89,6 +89,16 @@ body {
   border-radius: 4px;
 }
 
+/* Den teala fokusringen syns knappt mot mörka ytor — där används accentfärgen
+   i stället (header/nav, mörka ytor och kort/länkar på dem). */
+header :focus-visible,
+.bg-surface-dark :focus-visible,
+.bg-surface-dark:focus-visible,
+.bg-surface-dark-raised a:focus-visible,
+.bg-surface-dark-raised:focus-visible {
+  outline-color: var(--color-accent);
+}
+
 /* Mjuk scroll-reveal: sektioner tonar upp när de kommer in i vyn. Ren CSS
    scroll-driven animation — noll beroenden. Innehållet är fullt synligt om
    webbläsaren saknar stöd (@supports) och står helt still vid reduced-motion. */
@@ -168,6 +178,9 @@ body {
     display: none;
   }
   .ticker-toggle {
+    display: none;
+  }
+  .ticker-rep {
     display: none;
   }
 }

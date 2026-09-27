@@ -213,3 +213,18 @@ Allt stängs av vid `prefers-reduced-motion: reduce`.
 - **Hover på lagkort:** kortet lyfter och bilden zoomar.
 - **Mobil:** lagkorten är en rad att svepa i sidled (snap), rutnät från
   `md`-bredd.
+
+## Ändringar efter slutgranskning 2026-09-27
+
+A. **Veckans match-urval.** Derby vinner fortfarande alltid (flera → tidigast).
+   Annars väljs matchen efter en fast klubbprioritet
+   (`FEATURED_PRIORITY` i `lib/local-teams.ts`, IFK Västervik högst) i stället
+   för tabellplacering. `pickFeatured` tar prioritetslistan som andra argument
+   i stället för `standings`; tabellen används fortfarande till "N:a · P p" i
+   hjälten.
+B. **Nyheter utan toppnyhet.** De 6 senaste artiklarna visas som mörka kort
+   (samma stil som den gamla toppnyheten) i ett rutnät — 1 kolumn på mobil,
+   2 från `sm`. Allt äldre ligger kvar bakom "Visa äldre nyheter (N)".
+C. **Tid på kommande matcher.** Lagkortens "Nästa"-etikett och tickerns
+   kommande matcher visar nu även avsparkstid: "Nästa · sön 27/9 12:00"
+   respektive "sön 27/9 12:00 · Hemma – Borta".

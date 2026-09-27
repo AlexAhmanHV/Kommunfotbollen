@@ -22,6 +22,11 @@ function shortLeague(name: string): string {
   return m ? `Div ${m[1]}` : name;
 }
 
+/** Resultattext, eller "–" i stället för "null–null" om ett mål saknas. */
+function scoreText(home: number | null, away: number | null): string {
+  return `${home ?? "–"}–${away ?? "–"}`;
+}
+
 // Omgångens övriga lokala matcher: tid före avspark, resultat i läget "recent".
 export function RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiMatch[] }) {
   if (matches.length === 0) return null;
@@ -39,7 +44,7 @@ export function RoundStrip({ mode, matches }: { mode: MatchdayMode; matches: UiM
             </span>
             <span className="shrink-0 font-display text-lg font-extrabold tabular-nums text-accent">
               {mode === "recent"
-                ? `${m.homeScore}–${m.awayScore}`
+                ? scoreText(m.homeScore, m.awayScore)
                 : timeFmt.format(m.startsAt)}
             </span>
           </div>

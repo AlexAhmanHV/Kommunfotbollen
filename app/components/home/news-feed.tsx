@@ -9,7 +9,7 @@ export type NewsArticle = {
   teamNames: string[];
 };
 
-const SHOWN = 10; // toppnyhet + 9 i listan, resten bakom "Visa äldre"
+const FEATURED_COUNT = 6; // nyaste artiklarna som mörka kort, resten bakom "Visa äldre"
 
 const dateFmt = new Intl.DateTimeFormat("sv-SE", {
   day: "numeric",
@@ -33,7 +33,7 @@ function Tags({ names }: { names: string[] }) {
   );
 }
 
-function Lead({ a }: { a: NewsArticle }) {
+function FeaturedCard({ a }: { a: NewsArticle }) {
   return (
     <a
       href={a.id}
@@ -68,29 +68,26 @@ function Item({ a }: { a: NewsArticle }) {
   );
 }
 
-// Nyheterna om lagen: senaste som toppnyhet i ett mörkt kort, resten i lista.
+// Nyheterna om lagen: de sex senaste som mörka kort i rutnät, resten i lista
+// bakom "Visa äldre".
 export function NewsFeed({ articles }: { articles: NewsArticle[] }) {
-  const [lead, ...rest] = articles;
-  const list = rest.slice(0, SHOWN - 1);
-  const older = rest.slice(SHOWN - 1);
+  const featured = articles.slice(0, FEATURED_COUNT);
+  const older = articles.slice(FEATURED_COUNT);
 
   return (
     <section id="nyheter" className="reveal scroll-mt-24">
       <SectionHeading count={articles.length > 0 ? `${articles.length} artiklar` : undefined}>
         Nyheter
       </SectionHeading>
-      {!lead ? (
+      {featured.length === 0 ? (
         <p className="text-sm text-ink-muted">Inga nyheter om lagen just nu.</p>
       ) : (
         <>
-          <Lead a={lead} />
-          {list.length > 0 && (
-            <ul className="mt-2 divide-y divide-line">
-              {list.map((a) => (
-                <Item key={a.id} a={a} />
-              ))}
-            </ul>
-          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {featured.map((a) => (
+              <FeaturedCard key={a.id} a={a} />
+            ))}
+          </div>
           {older.length > 0 && (
             <details className="mt-3">
               <summary className="cursor-pointer text-xs font-semibold text-ink-muted hover:text-ink">
