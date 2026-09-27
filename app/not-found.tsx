@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { PageContainer } from "./components/page-container";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+    <PageContainer className="flex min-h-[60vh] flex-col items-center justify-center text-center">
       <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-emerald-400">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand" aria-hidden />
         404
@@ -22,6 +23,6 @@ export default function NotFound() {
         </span>
         Till startsidan
       </Link>
-    </div>
+    </PageContainer>
   );
 }

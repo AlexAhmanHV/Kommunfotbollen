@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Image from "next/image";
+import { Barlow_Condensed, Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { groups, leagues, tableRows, teams } from "@/lib/db/schema";
 import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
 import { SiteNav } from "./components/site-nav";
+import { SiteFooter } from "./components/site-footer";
 import "./globals.css";
 
 // Nav-data (serier + lokala lag). Bäst-effort: om DB ännu inte fyllts på
@@ -47,6 +47,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-barlow-condensed",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "Kommunfotbollen | Tabeller & resultat för lokalfotbollen",
   description:
@@ -62,49 +68,23 @@ export default async function RootLayout({
   return (
     <html
       lang="sv"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100">
-        <header className="sticky top-0 z-40 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur">
-          <div className="relative mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+      <body className="min-h-full flex flex-col bg-surface text-ink">
+        <header className="sticky top-0 z-40 border-b border-line-dark bg-surface-dark text-on-dark">
+          <div className="relative mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
             <Link
               href="/"
-              className="group flex items-center gap-2 font-semibold tracking-tight transition-colors hover:text-brand"
+              className="flex items-center gap-2 font-display text-xl font-extrabold uppercase tracking-wide text-on-dark"
             >
-              <Image
-                src="/logo.svg"
-                alt=""
-                width={26}
-                height={26}
-                className="transition-transform duration-200 group-hover:-rotate-6"
-              />
+              <span className="h-3.5 w-3.5 rounded-[3px] bg-accent" aria-hidden />
               Kommunfotbollen
             </Link>
             <SiteNav leagues={nav.leagues} teams={nav.teams} />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
-          {children}
-        </main>
-        <footer className="border-t border-neutral-800 py-8">
-          <div className="mx-auto flex max-w-4xl items-center justify-center px-4">
-            <a
-              href="https://alexahman.se"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-2 text-neutral-400 transition-colors hover:text-neutral-100"
-            >
-              <Image
-                src="/alexahman-logo.svg"
-                alt="AlexAhman"
-                width={28}
-                height={28}
-                className="rounded-md"
-              />
-              <span className="font-mono text-xs">Skapad av AlexAhman</span>
-            </a>
-          </div>
-        </footer>
+        <main className="flex-1">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );

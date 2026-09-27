@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { articles, dvReports, matches, matchGoals, podcastEpisodes, tableRows, teams, leagues } from "@/lib/db/schema";
 import { SectionHeading } from "../components/section-heading";
+import { PageContainer } from "../components/page-container";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export default async function SystemStatus() {
   ]);
 
   return (
-    <div className="space-y-14">
+    <PageContainer className="space-y-14">
       <header className="pt-2">
         <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-emerald-400">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand" aria-hidden />
@@ -264,6 +265,6 @@ export default async function SystemStatus() {
           </Link>
         </p>
       </section>
-    </div>
+    </PageContainer>
   );
 }

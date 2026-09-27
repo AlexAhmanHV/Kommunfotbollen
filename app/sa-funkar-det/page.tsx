@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageContainer } from "../components/page-container";
 
 export const metadata: Metadata = {
   title: "Så funkar det | Kommunfotbollen",
@@ -31,7 +32,7 @@ function Section({
 
 export default function SaFunkarDet() {
   return (
-    <div className="space-y-2">
+    <PageContainer className="space-y-2">
       <header className="pb-4">
         <p className="mb-2 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-emerald-400">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand" aria-hidden />
@@ -117,6 +118,6 @@ export default function SaFunkarDet() {
           </Link>
         </p>
       </Section>
-    </div>
+    </PageContainer>
   );
 }

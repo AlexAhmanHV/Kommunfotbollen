@@ -1,8 +1,8 @@
 import Image from "next/image";
 
 // Lagemblem: riktig Everysport-logo när den finns, annars ett monogram med
-// lagets initialer i palettens orange ton. Garanterar att varje lag har ett
-// konsekvent märke utan trasiga bilder eller licensproblem.
+// lagets initialer. Garanterar att varje lag har ett konsekvent märke utan
+// trasiga bilder eller licensproblem.
 
 function initials(name: string): string {
   const words = name
@@ -26,7 +26,7 @@ export function TeamCrest({
   if (logoUrl) {
     return (
       <span
-        className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-white ring-1 ring-neutral-800"
+        className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-white ring-1 ring-line"
         style={{ width: size, height: size }}
       >
         <Image
@@ -41,7 +41,7 @@ export function TeamCrest({
   }
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-md border border-brand/30 bg-brand/15 font-mono font-semibold text-neutral-100"
+      className="inline-flex shrink-0 items-center justify-center rounded-md bg-line-dark font-display font-bold text-on-dark"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
       aria-hidden
     >

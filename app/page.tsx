@@ -133,6 +133,7 @@ import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
 import { MatchList } from "./components/match-list";
 import { SectionHeading } from "./components/section-heading";
 import { TeamCrest } from "./components/team-crest";
+import { PageContainer } from "./components/page-container";
 
 // Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
 // för att fråga databasen vid varje besök.
@@ -280,7 +281,7 @@ export default async function Home() {
   for (const arr of formByTeam.values()) arr.reverse();
 
   return (
-    <div className="space-y-14">
+    <PageContainer className="space-y-14">
       <section className="pt-2">
         <h1 className="max-w-3xl text-balance text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
           Lokalfotbollen. Samlad och alltid uppdaterad.
@@ -292,7 +293,7 @@ export default async function Home() {
       </section>
 
       <section>
-        <SectionHeading variant="feature" count={`${localTeams.length} lag`}>
+        <SectionHeading count={`${localTeams.length} lag`}>
           Lokala lag
         </SectionHeading>
         <div className="flex flex-wrap gap-3">
@@ -441,6 +442,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }

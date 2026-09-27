@@ -7,11 +7,6 @@ import { TeamCrest } from "./team-crest";
 type League = { id: string; name: string };
 type Team = { id: string; name: string; leagueId: string; logoUrl: string | null };
 
-const PODCASTS = [
-  { name: "Nykritat", href: "https://pod.space/nykritat" },
-  { name: "Fotbollsviken", href: "https://pod.space/fotbollsviken" },
-];
-
 function Chevron() {
   return (
     <svg
@@ -55,11 +50,11 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
     setMobileOpen(false);
   };
 
-  // Gemensam stil: understruken orange markör på hover/öppen.
+  // Gemensam stil: grön understrykning vid hover/öppen meny.
   const itemCls =
-    "group relative inline-flex items-center gap-1.5 font-mono text-xs text-neutral-500 transition-colors hover:text-neutral-100 aria-expanded:text-neutral-100";
+    "group relative inline-flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide text-on-dark-muted transition-colors hover:text-on-dark aria-expanded:text-on-dark";
   const underline =
-    "after:absolute after:-bottom-1.5 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-brand after:transition-transform after:duration-200 group-hover:after:scale-x-100 group-aria-expanded:after:scale-x-100";
+    "after:absolute after:-bottom-1.5 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform after:duration-200 group-hover:after:scale-x-100 group-aria-expanded:after:scale-x-100";
 
   const leagueItems = leagues.map((l) => ({ label: l.name, href: `/serie/${l.id}` }));
 
@@ -84,7 +79,7 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
 
         <Dropdown
           id="lag"
-          label="Lokala lag"
+          label="Lag"
           open={open === "lag"}
           onToggle={() => setOpen(open === "lag" ? null : "lag")}
           itemCls={itemCls}
@@ -102,26 +97,11 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
         </Dropdown>
 
         <Link href="/#nyheter" onClick={close} className={`${itemCls} ${underline}`}>
-          Artiklar
+          Nyheter
         </Link>
 
-        <Dropdown
-          id="poddar"
-          label="Podcasts"
-          open={open === "poddar"}
-          onToggle={() => setOpen(open === "poddar" ? null : "poddar")}
-          itemCls={itemCls}
-          underline={underline}
-        >
-          {PODCASTS.map((p) => (
-            <DropdownLink key={p.name} href={p.href} external onClick={close}>
-              {p.name}
-            </DropdownLink>
-          ))}
-        </Dropdown>
-
-        <Link href="/#kommande" onClick={close} className={`${itemCls} ${underline}`}>
-          Kommande
+        <Link href="/#poddar" onClick={close} className={`${itemCls} ${underline}`}>
+          Poddar
         </Link>
 
         <Dropdown
@@ -148,7 +128,7 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
         onClick={() => setMobileOpen((v) => !v)}
         aria-label={mobileOpen ? "Stäng meny" : "Öppna meny"}
         aria-expanded={mobileOpen}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 text-neutral-400 transition-colors hover:text-neutral-100 md:hidden"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line-dark text-on-dark-muted transition-colors hover:text-on-dark md:hidden"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           {mobileOpen ? (
@@ -160,8 +140,8 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
       </button>
 
       {mobileOpen && (
-        <div className="absolute inset-x-0 top-full border-b border-neutral-800 bg-neutral-950/95 backdrop-blur md:hidden">
-          <div className="mx-auto max-w-4xl space-y-5 px-4 py-5">
+        <div className="absolute inset-x-0 top-full border-b border-line-dark bg-surface-dark md:hidden">
+          <div className="mx-auto max-w-5xl space-y-5 px-4 py-5">
             <MobileGroup label="Serier">
               {leagueItems.map((l) => (
                 <MobileLink key={l.href} href={l.href} onClick={close}>
@@ -169,7 +149,7 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
                 </MobileLink>
               ))}
             </MobileGroup>
-            <MobileGroup label="Lokala lag">
+            <MobileGroup label="Lag">
               {teams.map((t) => (
                 <MobileLink key={t.id} href={`/serie/${t.leagueId}`} onClick={close}>
                   <span className="flex items-center gap-2.5">
@@ -179,24 +159,17 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
                 </MobileLink>
               ))}
             </MobileGroup>
-            <MobileGroup label="Podcasts">
-              {PODCASTS.map((p) => (
-                <MobileLink key={p.name} href={p.href} external onClick={close}>
-                  {p.name}
-                </MobileLink>
-              ))}
-            </MobileGroup>
-            <div className="flex flex-col gap-3 border-t border-neutral-800 pt-4 font-mono text-sm">
-              <Link href="/#nyheter" onClick={close} className="text-neutral-300 hover:text-brand">
-                Artiklar
+            <div className="flex flex-col gap-3 border-t border-line-dark pt-4 font-display text-base font-bold uppercase tracking-wide">
+              <Link href="/#nyheter" onClick={close} className="text-on-dark hover:text-accent">
+                Nyheter
               </Link>
-              <Link href="/#kommande" onClick={close} className="text-neutral-300 hover:text-brand">
-                Kommande matcher
+              <Link href="/#poddar" onClick={close} className="text-on-dark hover:text-accent">
+                Poddar
               </Link>
-              <Link href="/sa-funkar-det" onClick={close} className="text-neutral-300 hover:text-brand">
+              <Link href="/sa-funkar-det" onClick={close} className="text-on-dark hover:text-accent">
                 Så funkar det
               </Link>
-              <Link href="/systemstatus" onClick={close} className="text-neutral-300 hover:text-brand">
+              <Link href="/systemstatus" onClick={close} className="text-on-dark hover:text-accent">
                 Systemstatus
               </Link>
             </div>
@@ -243,7 +216,7 @@ function Dropdown({
       {open && (
         <div
           id={`menu-${id}`}
-          className={`absolute top-full z-50 mt-3 max-h-[70vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/5 ${
+          className={`absolute top-full z-50 mt-3 max-h-[70vh] overflow-y-auto rounded-xl border border-line-dark bg-surface-dark-raised p-1.5 shadow-xl shadow-black/30 ${
             align === "right" ? "right-0" : "left-0"
           } ${wide ? "w-64" : "w-56"}`}
         >
@@ -258,24 +231,17 @@ function DropdownLink({
   href,
   children,
   onClick,
-  external,
 }: {
   href: string;
   children: React.ReactNode;
   onClick: () => void;
-  external?: boolean;
 }) {
-  const cls =
-    "block rounded-lg px-3 py-2 text-sm text-neutral-300 transition-colors hover:bg-brand/10 hover:text-neutral-100";
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>
-        {children}
-      </a>
-    );
-  }
   return (
-    <Link href={href} onClick={onClick} className={cls}>
+    <Link
+      href={href}
+      onClick={onClick}
+      className="block rounded-lg px-3 py-2 text-sm text-on-dark transition-colors hover:bg-line-dark"
+    >
       {children}
     </Link>
   );
@@ -284,7 +250,9 @@ function DropdownLink({
 function MobileGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 font-mono text-xs uppercase tracking-widest text-neutral-500">{label}</p>
+      <p className="mb-2 font-display text-sm font-bold uppercase tracking-widest text-on-dark-muted">
+        {label}
+      </p>
       <div className="flex flex-col">{children}</div>
     </div>
   );
@@ -294,23 +262,13 @@ function MobileLink({
   href,
   children,
   onClick,
-  external,
 }: {
   href: string;
   children: React.ReactNode;
   onClick: () => void;
-  external?: boolean;
 }) {
-  const cls = "rounded-lg px-2 py-2 text-sm text-neutral-200 hover:bg-brand/10";
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>
-        {children}
-      </a>
-    );
-  }
   return (
-    <Link href={href} onClick={onClick} className={cls}>
+    <Link href={href} onClick={onClick} className="rounded-lg px-2 py-2 text-sm text-on-dark hover:bg-line-dark">
       {children}
     </Link>
   );

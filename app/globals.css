@@ -36,6 +36,22 @@
 
   /* Signatur-pop: orange (given #FF9E20) — endast fyllningar/marker, ej text */
   --color-brand: #ff9e20;
+
+  /* Redesign steg 1: namngivna färger. De omskrivna neutral/emerald/brand
+     ovan används fortfarande av seriesidan, "Så funkar det" och systemstatus
+     och tas bort i steg 4. Ny kod använder bara dessa. */
+  --color-surface-dark: #0e1116;
+  --color-surface-dark-raised: #171b22;
+  --color-line-dark: #2a2f38;
+  --color-on-dark: #f2f2f0;
+  --color-on-dark-muted: #9aa0a8;
+  --color-surface: #f4f2f2;
+  --color-surface-raised: #fbfafa;
+  --color-line: #e4e2e3;
+  --color-ink: #1d2128;
+  --color-ink-muted: #565459;
+  --color-accent: #c6f432; /* text på mörkt, bara fyllning på ljust */
+  --color-form-draw: #4a515c;
 }
 
 @theme inline {
@@ -43,6 +59,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-barlow-condensed);
 }
 
 html {

@@ -25,9 +25,24 @@ function formatScorers(players: string[]): string {
     .join(", ");
 }
 
+// Lagnamn; lokala lag i fetstil med ett kort grönt streck framför.
+function TeamName({ id, name, align }: { id: string; name: string; align: "left" | "right" }) {
+  const local = isLocalTeam(id);
+  return (
+    <span
+      className={`flex min-w-0 items-center gap-1.5 ${align === "right" ? "justify-end" : ""} ${
+        local ? "font-semibold text-ink" : "text-ink"
+      }`}
+    >
+      {local && <span className="h-3 w-1 shrink-0 rounded-sm bg-accent" aria-hidden />}
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
+
 export async function MatchList({ matches }: { matches: UiMatch[] }) {
   if (matches.length === 0) {
-    return <p className="text-sm text-neutral-500">Inga matcher.</p>;
+    return <p className="text-sm text-ink-muted">Inga matcher.</p>;
   }
 
   const finishedIds = matches
@@ -36,7 +51,7 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
   const goals = await getGoalsByMatch(finishedIds);
 
   return (
-    <ul className="divide-y divide-neutral-800 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
+    <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-raised">
       {matches.map((m) => {
         const g = goals.get(m.id);
         const resultMissing = isResultMissing(m);
@@ -53,46 +68,38 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
         return (
           <li key={m.id} className="px-4 py-3">
             <div className="flex items-center gap-3 text-sm">
-              <span className="w-14 shrink-0 font-mono text-xs text-neutral-500">
+              <span className="w-14 shrink-0 text-xs tabular-nums text-ink-muted">
                 {dateFmt.format(m.startsAt)}
               </span>
-              <span className="flex flex-1 items-center justify-end gap-2 truncate">
-                <span
-                  className={`truncate text-right ${isLocalTeam(m.homeId) ? "font-semibold text-emerald-400" : ""}`}
-                >
-                  {m.homeName}
-                </span>
+              <span className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <TeamName id={m.homeId} name={m.homeName} align="right" />
                 <TeamCrest name={m.homeName} logoUrl={m.homeLogo} size={20} />
               </span>
-              <span className="shrink-0 font-mono font-semibold">
+              <span className="w-14 shrink-0 text-center font-display text-lg font-extrabold tabular-nums text-ink">
                 {m.status === "FINISHED" ? (
                   `${m.homeScore}–${m.awayScore}`
                 ) : resultMissing ? (
-                  <span className="text-neutral-500" title="Resultat saknas">–</span>
+                  <span className="text-ink-muted" title="Resultat saknas">–</span>
                 ) : m.status === "ONGOING" ? (
-                  <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-950">
+                  <span className="rounded bg-accent px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-ink">
                     live
                   </span>
                 ) : (
-                  <span className="text-neutral-500">{timeFmt.format(m.startsAt)}</span>
+                  <span className="text-base font-bold text-ink-muted">{timeFmt.format(m.startsAt)}</span>
                 )}
               </span>
-              <span className="flex flex-1 items-center gap-2 truncate">
+              <span className="flex min-w-0 flex-1 items-center gap-2">
                 <TeamCrest name={m.awayName} logoUrl={m.awayLogo} size={20} />
-                <span
-                  className={`truncate ${isLocalTeam(m.awayId) ? "font-semibold text-emerald-400" : ""}`}
-                >
-                  {m.awayName}
-                </span>
+                <TeamName id={m.awayId} name={m.awayName} align="left" />
               </span>
             </div>
 
             {(homeScorers.length > 0 || awayScorers.length > 0) && (
-              <div className="mt-1.5 flex items-start gap-3 text-[11px] leading-snug text-neutral-500">
+              <div className="mt-1.5 flex items-start gap-3 text-[11px] leading-snug text-ink-muted">
                 <span className="w-14 shrink-0" aria-hidden />
                 <span className="flex-1 text-right">{formatScorers(homeScorers)}</span>
                 <span
-                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
                   title="Målskyttar (från lokaltidningarnas matchreferat)"
                   aria-hidden
                 />
@@ -101,13 +108,13 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
             )}
 
             {resultMissing && (
-              <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-600">
+              <p className="mt-1.5 text-center text-[11px] leading-snug text-ink-muted">
                 Resultat saknas
               </p>
             )}
 
             {scorersMissing && (
-              <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-600">
+              <p className="mt-1.5 text-center text-[11px] leading-snug text-ink-muted">
                 Målskyttar ej rapporterade
               </p>
             )}

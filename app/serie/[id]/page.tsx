@@ -8,6 +8,7 @@ import { isLocalTeam } from "@/lib/local-teams";
 import { MatchList } from "../../components/match-list";
 import { SectionHeading } from "../../components/section-heading";
 import { TeamCrest } from "../../components/team-crest";
+import { PageContainer } from "../../components/page-container";
 
 // Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
 // för att fråga databasen vid varje besök.
@@ -81,7 +82,7 @@ export default async function SeriePage({
   );
 
   return (
-    <div className="space-y-14">
+    <PageContainer className="space-y-14">
       <section className="pt-2">
         <Link
           href="/"
@@ -198,6 +199,6 @@ export default async function SeriePage({
           </div>
         )}
       </section>
-    </div>
+    </PageContainer>
   );
 }
