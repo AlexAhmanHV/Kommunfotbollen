@@ -47,7 +47,8 @@ Svara false om:
 - laget bara nämns i förbigående medan artikeln egentligen handlar om ett annat lag (t.ex. motståndaren),
 - det är en namnkrock (företag, ort, förening med liknande namn),
 - det är en kategori-/sektionssida eller listning utan eget redaktionellt innehåll.
-Handlar artikeln om lagets herrfotboll (match, spelare, klubb): svara true. Vid genuin tveksamhet: svara true.`;
+Laget kan vara ett herr- eller damlag — damlag skrivs ofta kort som "<ort> Dam" (t.ex. "Västerviks Dam").
+Handlar artikeln om lagets fotboll (match, spelare, klubb): svara true. Vid genuin tveksamhet: svara true.`;
 
 export async function filterRelevance(): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
