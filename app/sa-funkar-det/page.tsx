@@ -105,7 +105,7 @@ export default function SaFunkarDet() {
             <p className="pt-2">
               <Link
                 href="/"
-                className="text-xs text-ink underline decoration-accent decoration-2 underline-offset-2"
+                className="text-xs text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-ink"
               >
                 ← Tillbaka till startsidan
               </Link>

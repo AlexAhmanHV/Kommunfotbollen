@@ -151,119 +151,119 @@ export default async function SystemStatus() {
         hårdkodad text.
       </PageHeader>
       <PageContainer className="space-y-14">
-      <section>
-        <SectionHeading>Senast körda jobb</SectionHeading>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <JobCard title="Matcher & tabeller" cadence="Dagligen, 23:00" lastRun={lastMatchSync ?? lastTableSync} />
-          <JobCard title="Målskyttar" cadence="Dagligen, 23:00" lastRun={lastGoalsCheck} />
-          <JobCard title="Nyheter" cadence="Dagligen, 22:00" lastRun={lastNewsFetch} />
-          <JobCard title="Poddavsnitt" cadence="Dagligen, 22:00" lastRun={lastPodcastFetch} />
-        </div>
-      </section>
-
-      <section>
-        <SectionHeading>Insamlad data</SectionHeading>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile value={leagueCount} label="serier" />
-          <StatTile value={teamCount} label="lag" />
-          <StatTile value={matchCount} label="matcher" />
-          <StatTile value={goalCount} label="registrerade mål" />
-          <StatTile value={articleCount} label="artiklar" />
-          <StatTile value={podcastCount} label="poddavsnitt" />
-        </div>
-      </section>
-
-      <section>
-        <SectionHeading>Hur det är byggt</SectionHeading>
-        <p className="mb-4 max-w-xl text-sm text-ink-muted">
-          Inget redigeras för hand. Fyra jobb hämtar, tolkar och sparar data
-          löpande — det här är vägen en artikel eller ett mål tar från källa
-          till sidan du läser just nu.
-        </p>
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          <FlowStep
-            label="Källor"
-            detail="Everysport, DV, Vimmerby T, VT, poddar"
-          />
-          <FlowArrow />
-          <FlowStep label="AI-extraktion" detail="Claude läser matchreferat och bedömer relevans" accent />
-          <FlowArrow />
-          <FlowStep label="Databas" detail="Supabase Postgres + Drizzle" />
-          <FlowArrow />
-          <FlowStep label="Sidan" detail="Next.js Server Components, ingen cache-fördröjning" />
-        </div>
-        <p className="mt-3 text-xs text-ink-muted">
-          Byggt med Next.js 16 · Supabase Postgres · Drizzle · Zod · Tailwind v4 · Claude API
-        </p>
-        <p className="mt-3 text-xs text-ink-muted">
-          <a
-            href="https://github.com/AlexAhmanHV/Kommunfotbollen"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 hover:text-ink-muted"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-            </svg>
-            Källkod på GitHub
-          </a>
-        </p>
-      </section>
-
-      <section>
-        <SectionHeading>Källor</SectionHeading>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-line bg-surface-raised p-4">
-            <div className="font-semibold text-ink">Everysport</div>
-            <p className="mt-1 text-sm text-ink-muted">
-              Tabeller, matcher och resultat för fyra serier.
-            </p>
+        <section>
+          <SectionHeading>Senast körda jobb</SectionHeading>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <JobCard title="Matcher & tabeller" cadence="Dagligen, 23:00" lastRun={lastMatchSync ?? lastTableSync} />
+            <JobCard title="Målskyttar" cadence="Dagligen, 23:00" lastRun={lastGoalsCheck} />
+            <JobCard title="Nyheter" cadence="Dagligen, 22:00" lastRun={lastNewsFetch} />
+            <JobCard title="Poddavsnitt" cadence="Dagligen, 22:00" lastRun={lastPodcastFetch} />
           </div>
-          <div className="rounded-xl border border-line bg-surface-raised p-4">
-            <div className="font-semibold text-ink">
-              Dagens Västervik &amp; Vimmerby Tidning
+        </section>
+
+        <section>
+          <SectionHeading>Insamlad data</SectionHeading>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <StatTile value={leagueCount} label="serier" />
+            <StatTile value={teamCount} label="lag" />
+            <StatTile value={matchCount} label="matcher" />
+            <StatTile value={goalCount} label="registrerade mål" />
+            <StatTile value={articleCount} label="artiklar" />
+            <StatTile value={podcastCount} label="poddavsnitt" />
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading>Hur det är byggt</SectionHeading>
+          <p className="mb-4 max-w-xl text-sm text-ink-muted">
+            Inget redigeras för hand. Fyra jobb hämtar, tolkar och sparar data
+            löpande — det här är vägen en artikel eller ett mål tar från källa
+            till sidan du läser just nu.
+          </p>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            <FlowStep
+              label="Källor"
+              detail="Everysport, DV, Vimmerby T, VT, poddar"
+            />
+            <FlowArrow />
+            <FlowStep label="AI-extraktion" detail="Claude läser matchreferat och bedömer relevans" accent />
+            <FlowArrow />
+            <FlowStep label="Databas" detail="Supabase Postgres + Drizzle" />
+            <FlowArrow />
+            <FlowStep label="Sidan" detail="Next.js Server Components, ingen cache-fördröjning" />
+          </div>
+          <p className="mt-3 text-xs text-ink-muted">
+            Byggt med Next.js 16 · Supabase Postgres · Drizzle · Zod · Tailwind v4 · Claude API
+          </p>
+          <p className="mt-3 text-xs text-ink-muted">
+            <a
+              href="https://github.com/AlexAhmanHV/Kommunfotbollen"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-ink hover:underline"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+              </svg>
+              Källkod på GitHub
+            </a>
+          </p>
+        </section>
+
+        <section>
+          <SectionHeading>Källor</SectionHeading>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-line bg-surface-raised p-4">
+              <div className="font-semibold text-ink">Everysport</div>
+              <p className="mt-1 text-sm text-ink-muted">
+                Tabeller, matcher och resultat för fyra serier.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-ink-muted">
-              Alla fotbollsartiklar läses (Vimmerby T via sitemap, DV via
-              fotbollssidan) och ger underlag för målskytte-extraktion.
-            </p>
-          </div>
-          <div className="rounded-xl border border-line bg-surface-raised p-4">
-            <div className="font-semibold text-ink">
-              Västerviks-Tidningen
+            <div className="rounded-xl border border-line bg-surface-raised p-4">
+              <div className="font-semibold text-ink">
+                Dagens Västervik &amp; Vimmerby Tidning
+              </div>
+              <p className="mt-1 text-sm text-ink-muted">
+                Alla fotbollsartiklar läses (Vimmerby T via sitemap, DV via
+                fotbollssidan) och ger underlag för målskytte-extraktion.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-ink-muted">
-              Artiklar hittas via sitemap. Brödtexten ligger bakom betalvägg,
-              så målskyttar läses bara ur rubrik och ingress.
-            </p>
+            <div className="rounded-xl border border-line bg-surface-raised p-4">
+              <div className="font-semibold text-ink">
+                Västerviks-Tidningen
+              </div>
+              <p className="mt-1 text-sm text-ink-muted">
+                Artiklar hittas via sitemap. Brödtexten ligger bakom betalvägg,
+                så målskyttar läses bara ur rubrik och ingress.
+              </p>
+            </div>
+            <div className="rounded-xl border border-line bg-surface-raised p-4">
+              <div className="font-semibold text-ink">Nykritat &amp; Fotbollsviken</div>
+              <p className="mt-1 text-sm text-ink-muted">
+                De två poddar som bevakar kommunfotbollen.
+              </p>
+            </div>
+            <div className="rounded-xl border border-line bg-surface-raised p-4 sm:col-span-2">
+              <div className="font-semibold text-ink">Claude (Anthropic)</div>
+              <p className="mt-1 text-sm text-ink-muted">
+                Bedömer artiklars relevans och läser ut målskyttar ur
+                matchreferat, med strikta regler mot att gissa.
+              </p>
+            </div>
           </div>
-          <div className="rounded-xl border border-line bg-surface-raised p-4">
-            <div className="font-semibold text-ink">Nykritat &amp; Fotbollsviken</div>
-            <p className="mt-1 text-sm text-ink-muted">
-              De två poddar som bevakar kommunfotbollen.
-            </p>
-          </div>
-          <div className="rounded-xl border border-line bg-surface-raised p-4 sm:col-span-2">
-            <div className="font-semibold text-ink">Claude (Anthropic)</div>
-            <p className="mt-1 text-sm text-ink-muted">
-              Bedömer artiklars relevans och läser ut målskyttar ur
-              matchreferat, med strikta regler mot att gissa.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section>
-        <p className="text-xs text-ink-muted">
-          <Link href="/sa-funkar-det" className="hover:text-ink-muted">
-            Läs mer om hur det funkar
-          </Link>{" "}
-          ·{" "}
-          <Link href="/" className="hover:text-ink-muted">
-            ← Tillbaka till startsidan
-          </Link>
-        </p>
-      </section>
+        <section>
+          <p className="text-xs text-ink-muted">
+            <Link href="/sa-funkar-det" className="hover:text-ink hover:underline">
+              Läs mer om hur det funkar
+            </Link>{" "}
+            ·{" "}
+            <Link href="/" className="hover:text-ink hover:underline">
+              ← Tillbaka till startsidan
+            </Link>
+          </p>
+        </section>
       </PageContainer>
     </>
   );
