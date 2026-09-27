@@ -128,7 +128,7 @@ function NewsItem({ a, fmt }: { a: NewsArticle; fmt: Intl.DateTimeFormat }) {
     </li>
   );
 }
-import { getMatches } from "@/lib/queries";
+import { getMatches, isResultMissing } from "@/lib/queries";
 import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
 import { MatchList } from "./components/match-list";
 import { SectionHeading } from "./components/section-heading";
@@ -165,16 +165,18 @@ export default async function Home() {
 
   // nästa match per lokalt lag (om någon finns i insamlingsfönstret)
   const localIds = [...LOCAL_TEAM_IDS];
-  const upcomingLocal = await getMatches({
-    where: and(
-      eq(matches.status, "UPCOMING"),
-      or(
-        inArray(matches.homeTeamId, localIds),
-        inArray(matches.awayTeamId, localIds),
+  const upcomingLocal = (
+    await getMatches({
+      where: and(
+        eq(matches.status, "UPCOMING"),
+        or(
+          inArray(matches.homeTeamId, localIds),
+          inArray(matches.awayTeamId, localIds),
+        ),
       ),
-    ),
-    order: "asc",
-  });
+      order: "asc",
+    })
+  ).filter((m) => !isResultMissing(m)); // passerade utan resultat är inte "nästa match"
   const nextMatch = new Map<string, (typeof upcomingLocal)[number]>();
   for (const m of upcomingLocal) {
     for (const id of [m.homeId, m.awayId]) {

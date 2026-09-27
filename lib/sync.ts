@@ -15,7 +15,7 @@ import {
   type MatchSource,
 } from "./sources/types";
 import { EverysportWidgetSource } from "./sources/everysport-widget";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Synken är enda skribenten till sportdata-zonen. Den:
@@ -131,12 +131,39 @@ async function syncLeagueTable(source: MatchSource, leagueRef: string, seasonSlu
   });
 }
 
+// Everysports lagsidor visar resultat ungefär tre veckor bakåt, seriens
+// matchlista bara en vecka. Äldre matcher utan resultat går inte att rädda.
+const TEAM_PAGE_LOOKBACK_MS = 21 * 24 * 60 * 60 * 1000;
+const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+
 /** Matcher och resultat. Lagen och grupperna måste redan finnas (syncLeagueTable). */
 async function syncLeagueMatches(source: MatchSource, leagueRef: string, seasonSlug: string) {
   const db = await getDb();
-  const rawMatches = z.array(sourceMatchSchema).parse(await source.getMatches(leagueRef, seasonSlug));
-
   const now = new Date();
+
+  // Matcher som står som kommande fast de spelades för över ett dygn sedan har
+  // fallit ur seriens fönster (t.ex. efter ett driftavbrott). Hemmalagets
+  // lagsida har resultatet så länge matchen är yngre än ~tre veckor. Normalt
+  // finns inga sådana, och då läses inga extra sidor.
+  const stale = await db
+    .select({ homeTeamId: matches.homeTeamId })
+    .from(matches)
+    .innerJoin(groups, eq(matches.groupId, groups.id))
+    .where(
+      and(
+        eq(groups.leagueId, nid(source.name, leagueRef)),
+        inArray(matches.status, ["UPCOMING", "ONGOING"]),
+        lt(matches.startsAt, new Date(now.getTime() - STALE_AFTER_MS)),
+        gt(matches.startsAt, new Date(now.getTime() - TEAM_PAGE_LOOKBACK_MS)),
+      ),
+    );
+  const prefix = `${source.name}-`;
+  const extraTeamRefs = [...new Set(stale.map((m) => m.homeTeamId.slice(prefix.length)))];
+
+  const rawMatches = z
+    .array(sourceMatchSchema)
+    .parse(await source.getMatches(leagueRef, seasonSlug, extraTeamRefs));
+
   // Keyed by id: Postgres refuses to update the same row twice in one insert.
   const rows = new Map<string, typeof matches.$inferInsert>();
   for (const m of rawMatches) {

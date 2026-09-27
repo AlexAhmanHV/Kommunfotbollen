@@ -1,4 +1,4 @@
-import type { UiMatch } from "@/lib/queries";
+import { isResultMissing, type UiMatch } from "@/lib/queries";
 import { isLocalTeam } from "@/lib/local-teams";
 import { getGoalsByMatch } from "@/lib/goals";
 import { TeamCrest } from "./team-crest";
@@ -39,6 +39,7 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
     <ul className="divide-y divide-neutral-800 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
       {matches.map((m) => {
         const g = goals.get(m.id);
+        const resultMissing = isResultMissing(m);
         const homeScorers = g?.filter((x) => x.teamId === m.homeId).map((x) => x.player) ?? [];
         const awayScorers = g?.filter((x) => x.teamId === m.awayId).map((x) => x.player) ?? [];
         // Målskyttar letas bara för de lokala lagens matcher — bara där är det
@@ -66,6 +67,8 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
               <span className="shrink-0 font-mono font-semibold">
                 {m.status === "FINISHED" ? (
                   `${m.homeScore}–${m.awayScore}`
+                ) : resultMissing ? (
+                  <span className="text-neutral-500" title="Resultat saknas">–</span>
                 ) : m.status === "ONGOING" ? (
                   <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-950">
                     live
@@ -95,6 +98,12 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
                 />
                 <span className="flex-1">{formatScorers(awayScorers)}</span>
               </div>
+            )}
+
+            {resultMissing && (
+              <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-600">
+                Resultat saknas
+              </p>
             )}
 
             {scorersMissing && (

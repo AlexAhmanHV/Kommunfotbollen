@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { groups, leagues, matches, tableRows, teams } from "@/lib/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
-import { getMatches } from "@/lib/queries";
+import { getMatches, isResultMissing } from "@/lib/queries";
 import { isLocalTeam } from "@/lib/local-teams";
 import { MatchList } from "../../components/match-list";
 import { SectionHeading } from "../../components/section-heading";
@@ -63,9 +63,9 @@ export default async function SeriePage({
     order: "asc",
   });
 
-  const upcoming = allMatches.filter((m) => m.status === "UPCOMING");
+  const upcoming = allMatches.filter((m) => m.status === "UPCOMING" && !isResultMissing(m));
   const finished = allMatches
-    .filter((m) => m.status === "FINISHED")
+    .filter((m) => m.status === "FINISHED" || isResultMissing(m))
     .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
 
   // Widget-datan saknar omgångsnummer, så "senaste omgången" approximeras:

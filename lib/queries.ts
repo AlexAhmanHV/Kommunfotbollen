@@ -18,6 +18,15 @@ export type UiMatch = {
   awayScore: number | null;
 };
 
+// En match som står som kommande ett dygn efter avspark har inget resultat
+// från källan (synken försöker hämta det i tre veckor). Den visas bland de
+// spelade med "Resultat saknas" i stället för att ligga kvar som kommande.
+const RESULT_MISSING_AFTER_MS = 24 * 60 * 60 * 1000;
+
+export function isResultMissing(m: Pick<UiMatch, "status" | "startsAt">): boolean {
+  return m.status === "UPCOMING" && m.startsAt.getTime() < Date.now() - RESULT_MISSING_AFTER_MS;
+}
+
 const home = alias(teams, "home");
 const away = alias(teams, "away");
 

@@ -212,10 +212,15 @@ export class EverysportWidgetSource implements MatchSource {
     };
   }
 
-  async getMatches(leagueRef: string): Promise<SourceMatch[]> {
+  async getMatches(
+    leagueRef: string,
+    _season?: string,
+    extraTeamRefs: string[] = [],
+  ): Promise<SourceMatch[]> {
     // sekventiellt (via throttle-kön) — inga samtidiga skurar mot Everysport
     const pages = [await fetchNextData(this.gamesUrl(leagueRef))];
-    for (const t of this.teamRefsByLeague[leagueRef] ?? []) {
+    const teamRefs = new Set([...(this.teamRefsByLeague[leagueRef] ?? []), ...extraTeamRefs]);
+    for (const t of teamRefs) {
       pages.push(await fetchNextData(this.teamUrl(t)));
     }
 

@@ -80,6 +80,8 @@ export type SourceTableRow = z.infer<typeof sourceTableRowSchema>;
 export interface MatchSource {
   readonly name: string;
   getLeague(leagueRef: string, season: string): Promise<SourceLeague>;
-  getMatches(leagueRef: string, season: string): Promise<SourceMatch[]>;
+  /** extraTeamRefs: lag vars egna sidor också ska läsas, t.ex. för matcher som
+   * fastnat utan resultat efter att ha fallit ur seriens ordinarie fönster. */
+  getMatches(leagueRef: string, season: string, extraTeamRefs?: string[]): Promise<SourceMatch[]>;
   getTable(leagueRef: string, season: string): Promise<SourceTableRow[]>;
 }
