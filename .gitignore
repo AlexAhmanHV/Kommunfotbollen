@@ -42,3 +42,6 @@ next-env.d.ts
 
 # PGlite local database
 .pgdata/
+
+# Brainstorming-mockups (superpowers visual companion)
+.superpowers/
