@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { TeamCrest } from "./team-crest";
 
 type League = { id: string; name: string };
-type Team = { id: string; name: string; leagueId: string; logoUrl: string | null };
+type Team = { id: string; name: string; leagueId: string; logoUrl: string | null; slug: string | null };
 
 function Chevron() {
   return (
@@ -87,7 +87,11 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
           wide
         >
           {teams.map((t) => (
-            <DropdownLink key={t.id} href={`/serie/${t.leagueId}`} onClick={close}>
+            <DropdownLink
+              key={t.id}
+              href={t.slug ? `/lag/${t.slug}` : `/serie/${t.leagueId}`}
+              onClick={close}
+            >
               <span className="flex items-center gap-2.5">
                 <TeamCrest name={t.name} logoUrl={t.logoUrl} size={22} />
                 {t.name}
@@ -151,7 +155,11 @@ export function SiteNav({ leagues, teams }: { leagues: League[]; teams: Team[] }
             </MobileGroup>
             <MobileGroup label="Lag">
               {teams.map((t) => (
-                <MobileLink key={t.id} href={`/serie/${t.leagueId}`} onClick={close}>
+                <MobileLink
+                  key={t.id}
+                  href={t.slug ? `/lag/${t.slug}` : `/serie/${t.leagueId}`}
+                  onClick={close}
+                >
                   <span className="flex items-center gap-2.5">
                     <TeamCrest name={t.name} logoUrl={t.logoUrl} size={20} />
                     {t.name}

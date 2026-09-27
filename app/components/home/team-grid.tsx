@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { FormLetter, TeamSummary } from "@/lib/matchday";
 import { teamImage } from "@/lib/team-images";
+import { teamSlug } from "@/lib/teams";
 import { TeamCrest } from "../team-crest";
 
 const weekdayFmt = new Intl.DateTimeFormat("sv-SE", {
@@ -26,7 +27,7 @@ const FORM_STYLE: Record<FormLetter, string> = {
 };
 const FORM_LABEL: Record<FormLetter, string> = { V: "Vinst", O: "Oavgjort", F: "Förlust" };
 
-function Form({ form }: { form: FormLetter[] }) {
+export function FormBadges({ form }: { form: FormLetter[] }) {
   if (form.length === 0) return null;
   return (
     <div
@@ -84,7 +85,7 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
         <span className="block truncate font-display text-base font-bold uppercase leading-none">
           {team.name}
         </span>
-        <Form form={team.form} />
+        <FormBadges form={team.form} />
         <div className="mt-2.5 flex flex-col gap-0.5">
           {team.next ? (
             <>
@@ -108,9 +109,11 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
   const cls =
     "group rise block w-[70%] shrink-0 snap-start overflow-hidden rounded-lg bg-surface-dark-raised transition duration-200 md:w-auto";
   const style = { "--i": index } as React.CSSProperties;
-  return team.leagueId ? (
+  const slug = teamSlug(team.teamId);
+  const href = slug ? `/lag/${slug}` : team.leagueId ? `/serie/${team.leagueId}` : null;
+  return href ? (
     <Link
-      href={`/serie/${team.leagueId}`}
+      href={href}
       className={`${cls} hover:shadow-xl hover:shadow-black/40 motion-safe:hover:-translate-y-1`}
       style={style}
     >

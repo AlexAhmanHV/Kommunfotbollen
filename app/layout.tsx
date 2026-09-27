@@ -5,6 +5,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { groups, leagues, tableRows, teams } from "@/lib/db/schema";
 import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
+import { teamSlug } from "@/lib/teams";
 import { SiteNav } from "./components/site-nav";
 import { SiteFooter } from "./components/site-footer";
 import "./globals.css";
@@ -31,7 +32,7 @@ async function getNavData() {
       .innerJoin(leagues, eq(groups.leagueId, leagues.id))
       .where(inArray(tableRows.teamId, [...LOCAL_TEAM_IDS]))
       .orderBy(asc(leagues.name), asc(tableRows.position));
-    return { leagues: ls, teams: ts };
+    return { leagues: ls, teams: ts.map((t) => ({ ...t, slug: teamSlug(t.id) })) };
   } catch {
     return { leagues: [], teams: [] };
   }
