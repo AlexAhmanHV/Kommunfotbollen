@@ -10,7 +10,7 @@ import {
   tableRows,
   teams,
 } from "@/lib/db/schema";
-import { LOCAL_TEAM_IDS } from "@/lib/local-teams";
+import { FEATURED_PRIORITY, LOCAL_TEAM_IDS } from "@/lib/local-teams";
 import {
   latestRowPerTeam,
   matchdayMode,
@@ -126,7 +126,7 @@ export default async function Home() {
     latestRowPerTeam(standingRows).map((r) => [r.teamId, { position: r.position, pts: r.pts }]),
   );
   const { mode, matches: modeMatches } = matchdayMode(localMatches, LOCAL_TEAM_IDS, now);
-  const featured = pickFeatured(modeMatches, standings, LOCAL_TEAM_IDS);
+  const featured = pickFeatured(modeMatches, FEATURED_PRIORITY, LOCAL_TEAM_IDS);
   const others = modeMatches.filter((m) => m.id !== featured?.id);
   const summaries = teamSummaries(
     latestRowPerTeam(localTeamRows) as LocalTeamRow[],

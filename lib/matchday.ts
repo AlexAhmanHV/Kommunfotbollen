@@ -58,6 +58,7 @@ export function matchdayMode(
     .filter(
       (m) =>
         (m.status === "UPCOMING" || m.status === "ONGOING") &&
+        m.startsAt.getTime() >= t - DAY_MS &&
         m.startsAt.getTime() <= t + WINDOW_MS,
     )
     .sort(byStart);
@@ -76,10 +77,11 @@ export function matchdayMode(
   return { mode: "offseason", matches: [] };
 }
 
-/** Veckans match: derby först (tidigast), annars bäst placerade lokala laget (lika → tidigast). */
+/** Veckans match: derby först (tidigast), annars laget högst upp i prioritetslistan
+ * (lika → tidigast). Lokala lag som saknas i listan rankas sist. */
 export function pickFeatured(
   matches: UiMatch[],
-  standings: ReadonlyMap<string, Standing>,
+  priority: readonly string[],
   localIds: ReadonlySet<string>,
 ): UiMatch | null {
   if (matches.length === 0) return null;
@@ -87,15 +89,17 @@ export function pickFeatured(
   const derbies = matches.filter((m) => isDerby(m, localIds)).sort(byStart);
   if (derbies.length > 0) return derbies[0];
 
-  const bestLocalPosition = (m: UiMatch) =>
+  const bestPriorityRank = (m: UiMatch) =>
     Math.min(
       ...[m.homeId, m.awayId]
         .filter((id) => localIds.has(id))
-        .map((id) => standings.get(id)?.position ?? Infinity),
+        .map((id) => {
+          const rank = priority.indexOf(id);
+          return rank === -1 ? Infinity : rank;
+        }),
     );
-  // Infinity - Infinity = NaN, som är falskt → faller igenom till avspark.
   return [...matches].sort(
-    (a, b) => bestLocalPosition(a) - bestLocalPosition(b) || byStart(a, b),
+    (a, b) => bestPriorityRank(a) - bestPriorityRank(b) || byStart(a, b),
   )[0];
 }
 

@@ -9,7 +9,6 @@ import {
   teamSummaries,
   tickerItems,
   type LocalTeamRow,
-  type Standing,
 } from "./matchday";
 
 const NOW = new Date("2026-10-01T12:00:00Z");
@@ -92,46 +91,45 @@ describe("matchdayMode", () => {
     assert.equal(r.mode, "offseason");
     assert.deepEqual(r.matches, []);
   });
+  it("en gammal pågående match (30 dagar) räknas inte som kommande", () => {
+    const stale = match({ homeId: "L1", status: "ONGOING", startsAt: at(-30) });
+    const r = matchdayMode([stale], LOCAL, NOW);
+    assert.equal(r.mode, "offseason");
+  });
 });
 
 describe("pickFeatured", () => {
-  const standings = new Map<string, Standing>([
-    ["L1", { position: 6, pts: 27 }],
-    ["L2", { position: 1, pts: 48 }],
-  ]);
+  // L1 har högre prioritet än L2 i dessa tester.
+  const priority = ["L1", "L2"];
 
-  it("derby vinner över bättre placerat lag", () => {
+  it("derby vinner över match med högre prioriterat lag", () => {
     const derby = match({ homeId: "L1", awayId: "L2", startsAt: at(5) });
-    const top = match({ homeId: "L2", startsAt: at(1) });
-    assert.equal(pickFeatured([top, derby], standings, LOCAL)?.id, derby.id);
+    const top = match({ homeId: "L1", startsAt: at(1) });
+    assert.equal(pickFeatured([top, derby], priority, LOCAL)?.id, derby.id);
   });
   it("flera derbyn: det tidigaste", () => {
     const late = match({ homeId: "L1", awayId: "L2", startsAt: at(6) });
     const early = match({ homeId: "L2", awayId: "L1", startsAt: at(2) });
-    assert.equal(pickFeatured([late, early], standings, LOCAL)?.id, early.id);
+    assert.equal(pickFeatured([late, early], priority, LOCAL)?.id, early.id);
   });
-  it("utan derby: bäst placerade lokala laget", () => {
-    const l1 = match({ homeId: "L1", startsAt: at(1) });
-    const l2 = match({ awayId: "L2", startsAt: at(4) });
-    assert.equal(pickFeatured([l1, l2], standings, LOCAL)?.id, l2.id);
+  it("utan derby: högst prioriterade laget vinner även om motståndaren spelar tidigare", () => {
+    const l1 = match({ homeId: "L1", startsAt: at(4) });
+    const l2 = match({ awayId: "L2", startsAt: at(1) });
+    assert.equal(pickFeatured([l1, l2], priority, LOCAL)?.id, l1.id);
   });
-  it("lika placering: tidigast avspark", () => {
-    const same = new Map<string, Standing>([
-      ["L1", { position: 3, pts: 20 }],
-      ["L2", { position: 3, pts: 20 }],
-    ]);
+  it("lika prioritet (samma lag i två matcher): tidigast avspark", () => {
     const later = match({ homeId: "L1", startsAt: at(4) });
-    const sooner = match({ awayId: "L2", startsAt: at(2) });
-    assert.equal(pickFeatured([later, sooner], same, LOCAL)?.id, sooner.id);
+    const sooner = match({ homeId: "L1", startsAt: at(2) });
+    assert.equal(pickFeatured([later, sooner], priority, LOCAL)?.id, sooner.id);
   });
-  it("lag utan tabellrad hamnar efter lag med placering", () => {
-    const unplaced = match({ homeId: "L1", startsAt: at(1) });
-    const placed = match({ awayId: "L2", startsAt: at(3) });
-    const only = new Map<string, Standing>([["L2", { position: 9, pts: 5 }]]);
-    assert.equal(pickFeatured([unplaced, placed], only, LOCAL)?.id, placed.id);
+  it("lag som saknas i prioritetslistan hamnar sist", () => {
+    const unlisted = match({ homeId: "L3", startsAt: at(1) });
+    const listed = match({ homeId: "L2", startsAt: at(3) });
+    const localWithL3 = new Set(["L1", "L2", "L3"]);
+    assert.equal(pickFeatured([unlisted, listed], priority, localWithL3)?.id, listed.id);
   });
   it("inga matcher ger null", () => {
-    assert.equal(pickFeatured([], standings, LOCAL), null);
+    assert.equal(pickFeatured([], priority, LOCAL), null);
   });
 });
 

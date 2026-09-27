@@ -17,6 +17,21 @@ export function isLocalTeam(teamId: string): boolean {
   return LOCAL_TEAM_IDS.has(teamId);
 }
 
+// Fast prioritetsordning för "Veckans match" när ingen derby avgör
+// (se lib/matchday.ts pickFeatured). Satt av produktägaren 2026-09-27.
+export const FEATURED_PRIORITY: readonly string[] = [
+  "eswidget-9925", // IFK Västervik
+  "eswidget-9942", // Västerviks FF
+  "eswidget-10040", // Hjorted/Totebo
+  "eswidget-51390", // Tjust IF FF
+  "eswidget-10039", // Gunnebo IF
+  "eswidget-23106", // B.O.IF
+  "eswidget-191798", // Västerviks damfotboll IF
+  "eswidget-10249", // Överums IK
+  "eswidget-9982", // Ankarsrums IS
+  "eswidget-224214", // FC Örbäcken
+];
+
 // Namnvarianter för nyhetsmatchning (gemener; matchas som delsträng i
 // rubrik + ingress). Hålls avsiktligt strama: "gunnebo" ensamt är ett
 // företag, "ankarsrum" ett hushållsmaskinmärke, "tjust" en hel bygd —
