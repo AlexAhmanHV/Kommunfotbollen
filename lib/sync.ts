@@ -15,22 +15,23 @@ import {
   type MatchSource,
 } from "./sources/types";
 import { EverysportWidgetSource } from "./sources/everysport-widget";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Synken är enda skribenten till sportdata-zonen. Den:
 //  1. hämtar från källan, 2. Zod-validerar, 3. upsertar idempotent
 //  (naturliga id:n "<källa>-<ref>"), 4. ersätter tabellen per grupp.
+// Varje tabell skrivs med ett anrop per serie (flerradsinsert), inte ett per rad.
 
 function nid(source: string, ref: string) {
   return `${source}-${ref}`;
 }
 
-export async function syncLeague(source: MatchSource, leagueRef: string, seasonSlug: string) {
+/** Serien, grupperna, lagen och tabellen — allt kommer från standings-sidan. */
+async function syncLeagueTable(source: MatchSource, leagueRef: string, seasonSlug: string) {
   const db = await getDb();
 
   const league = sourceLeagueSchema.parse(await source.getLeague(leagueRef, seasonSlug));
-  const rawMatches = z.array(sourceMatchSchema).parse(await source.getMatches(leagueRef, seasonSlug));
   const rawTable = z.array(sourceTableRowSchema).parse(await source.getTable(leagueRef, seasonSlug));
 
   const seasonId = nid(source.name, league.season.slug);
@@ -61,44 +62,87 @@ export async function syncLeague(source: MatchSource, leagueRef: string, seasonS
       set: { name: league.name, level: league.level, district: league.district },
     });
 
+  const groupRows = league.groups.map((g) => ({
+    id: nid(source.name, g.sourceRef),
+    leagueId,
+    name: g.name,
+  }));
+  // Keyed by id: Postgres refuses to update the same row twice in one insert.
+  const teamRows = new Map<string, typeof teams.$inferInsert>();
+  const entryRows: (typeof teamEntries.$inferInsert)[] = [];
   for (const g of league.groups) {
-    const groupId = nid(source.name, g.sourceRef);
-    await db
-      .insert(groups)
-      .values({ id: groupId, leagueId, name: g.name })
-      .onConflictDoUpdate({ target: groups.id, set: { name: g.name, leagueId } });
-
     for (const t of g.teams) {
       const teamId = nid(source.name, t.sourceRef);
-      await db
-        .insert(teams)
-        .values({
-          id: teamId,
-          name: t.name,
-          shortName: t.shortName ?? null,
-          logoUrl: t.logoUrl ?? null,
-        })
-        .onConflictDoUpdate({
-          target: teams.id,
-          // behåll befintlig logo om ny synk saknar den (lägre divisioner
-          // saknar emblem hos Everysport — skriv inte över med null)
-          set: {
-            name: t.name,
-            shortName: t.shortName ?? null,
-            ...(t.logoUrl ? { logoUrl: t.logoUrl } : {}),
-          },
-        });
-      await db
-        .insert(teamEntries)
-        .values({ teamId, groupId })
-        .onConflictDoNothing();
+      teamRows.set(teamId, {
+        id: teamId,
+        name: t.name,
+        shortName: t.shortName ?? null,
+        logoUrl: t.logoUrl ?? null,
+      });
+      entryRows.push({ teamId, groupId: nid(source.name, g.sourceRef) });
     }
   }
 
+  if (groupRows.length > 0) {
+    await db
+      .insert(groups)
+      .values(groupRows)
+      .onConflictDoUpdate({
+        target: groups.id,
+        set: { name: sql`excluded.name`, leagueId: sql`excluded.league_id` },
+      });
+  }
+  if (teamRows.size > 0) {
+    await db
+      .insert(teams)
+      .values([...teamRows.values()])
+      .onConflictDoUpdate({
+        target: teams.id,
+        set: {
+          name: sql`excluded.name`,
+          shortName: sql`excluded.short_name`,
+          // behåll befintlig logo om ny synk saknar den (lägre divisioner
+          // saknar emblem hos Everysport — skriv inte över med null)
+          logoUrl: sql`coalesce(excluded.logo_url, teams.logo_url)`,
+        },
+      });
+  }
+  if (entryRows.length > 0) {
+    await db.insert(teamEntries).values(entryRows).onConflictDoNothing();
+  }
+
+  // Tabellen ersätts atomiskt per grupp — källan är alltid facit.
   const now = new Date();
+  const groupIds = [...new Set(rawTable.map((r) => nid(source.name, r.groupRef)))];
+  if (groupIds.length === 0) return;
+  await db.transaction(async (tx) => {
+    await tx.delete(tableRows).where(inArray(tableRows.groupId, groupIds));
+    await tx.insert(tableRows).values(
+      rawTable.map((r) => ({
+        groupId: nid(source.name, r.groupRef),
+        teamId: nid(source.name, r.teamRef),
+        position: r.position,
+        gp: r.gp, w: r.w, d: r.d, l: r.l,
+        gf: r.gf, ga: r.ga, gd: r.gd, pts: r.pts,
+        positionStatus: r.positionStatus,
+        computedAt: now,
+      })),
+    );
+  });
+}
+
+/** Matcher och resultat. Lagen och grupperna måste redan finnas (syncLeagueTable). */
+async function syncLeagueMatches(source: MatchSource, leagueRef: string, seasonSlug: string) {
+  const db = await getDb();
+  const rawMatches = z.array(sourceMatchSchema).parse(await source.getMatches(leagueRef, seasonSlug));
+
+  const now = new Date();
+  // Keyed by id: Postgres refuses to update the same row twice in one insert.
+  const rows = new Map<string, typeof matches.$inferInsert>();
   for (const m of rawMatches) {
-    const row = {
-      id: nid(source.name, m.sourceRef),
+    const id = nid(source.name, m.sourceRef);
+    rows.set(id, {
+      id,
       groupId: nid(source.name, m.groupRef),
       round: m.round ?? null,
       startsAt: new Date(m.startsAt),
@@ -108,40 +152,47 @@ export async function syncLeague(source: MatchSource, leagueRef: string, seasonS
       homeScore: m.homeScore,
       awayScore: m.awayScore,
       updatedAt: now,
-    };
-    // (Här hör diff-detektering + notiser hemma i v2: jämför status/resultat
-    // mot befintlig rad innan upsert och skapa Notification vid förändring.)
-    await db
-      .insert(matches)
-      .values(row)
-      .onConflictDoUpdate({
-        target: matches.id,
-        set: {
-          startsAt: row.startsAt,
-          status: row.status,
-          homeScore: row.homeScore,
-          awayScore: row.awayScore,
-          round: row.round,
-          updatedAt: now,
-        },
-      });
-  }
-
-  // Tabellen ersätts atomiskt per grupp — källan är alltid facit.
-  const groupIds = new Set(rawTable.map((r) => nid(source.name, r.groupRef)));
-  for (const groupId of groupIds) {
-    await db.delete(tableRows).where(eq(tableRows.groupId, groupId));
-  }
-  for (const r of rawTable) {
-    await db.insert(tableRows).values({
-      groupId: nid(source.name, r.groupRef),
-      teamId: nid(source.name, r.teamRef),
-      position: r.position,
-      gp: r.gp, w: r.w, d: r.d, l: r.l,
-      gf: r.gf, ga: r.ga, gd: r.gd, pts: r.pts,
-      positionStatus: r.positionStatus,
-      computedAt: now,
     });
+  }
+  if (rows.size === 0) return;
+
+  // (Här hör diff-detektering + notiser hemma i v2: jämför status/resultat
+  // mot befintlig rad innan upsert och skapa Notification vid förändring.)
+  await db
+    .insert(matches)
+    .values([...rows.values()])
+    .onConflictDoUpdate({
+      target: matches.id,
+      set: {
+        startsAt: sql`excluded.starts_at`,
+        status: sql`excluded.status`,
+        homeScore: sql`excluded.home_score`,
+        awayScore: sql`excluded.away_score`,
+        round: sql`excluded.round`,
+        updatedAt: sql`excluded.updated_at`,
+      },
+    });
+}
+
+/** Hela serien: tabell (skapar lag/grupper) följt av matcher. */
+export async function syncLeague(source: MatchSource, leagueRef: string, seasonSlug: string) {
+  await syncLeagueTable(source, leagueRef, seasonSlug);
+  await syncLeagueMatches(source, leagueRef, seasonSlug);
+}
+
+// En körning i taget per jobb: appens timer och en manuell /api/sync ska inte
+// köra samma jobb parallellt (dubbla Everysport-anrop, dubbla AI-anrop).
+const globalForSync = globalThis as typeof globalThis & { __kfRunningJobs?: Set<string> };
+const runningJobs = (globalForSync.__kfRunningJobs ??= new Set());
+
+async function exclusive(job: string, fn: () => Promise<void>): Promise<boolean> {
+  if (runningJobs.has(job)) return false;
+  runningJobs.add(job);
+  try {
+    await fn();
+    return true;
+  } finally {
+    runningJobs.delete(job);
   }
 }
 
@@ -164,63 +215,61 @@ const SYNC_TARGETS: { source: MatchSource; ref: string; season: string }[] = [
   { source: esWidget, ref: "144822", season: "2026" }, // Div 3 Småland sydöstra (dam)
 ];
 
-/** Synkar matchdata (tabeller/matcher) + målskyttar. Körs ofta (var 15:e min)
- * så skyttarna dyker upp snabbt efter DV:s matchrapporter (~2 h efter match).
- * En serie som fallerar (t.ex. Everysport svarar konstigt) stoppar inte de andra. */
-export async function syncMatches() {
-  for (const t of SYNC_TARGETS) {
-    try {
-      await syncLeague(t.source, t.ref, t.season);
-    } catch (err) {
-      console.error(`[sync] serie ${t.ref} misslyckades:`, err);
+/** Synkar allt som rör lagen: serier, lag, tabeller, matcher/resultat och
+ * målskyttar. Körs en gång/dygn (23:00), efter kvällens matcher.
+ * En serie som fallerar (t.ex. Everysport svarar konstigt) stoppar inte de andra.
+ * Returnerar false om en lagsynk redan pågår. */
+export function syncTeams(): Promise<boolean> {
+  return exclusive("teams", async () => {
+    for (const t of SYNC_TARGETS) {
+      try {
+        await syncLeague(t.source, t.ref, t.season);
+      } catch (err) {
+        console.error(`[sync] serie ${t.ref} misslyckades:`, err);
+      }
     }
-  }
-  // efter matcherna (så kopplingen hittar dem) — billig i steady state:
-  // dv_reports-dedupen gör att AI bara körs på nya rapporter.
-  try {
-    const { syncGoals } = await import("./goals");
-    await syncGoals();
-  } catch (err) {
-    console.error("[sync] målskyttar misslyckades:", err);
-  }
+    // efter matcherna (så kopplingen hittar dem) — dv_reports-dedupen gör att
+    // AI bara körs på nya rapporter.
+    try {
+      const { syncGoals } = await import("./goals");
+      await syncGoals();
+    } catch (err) {
+      console.error("[sync] målskyttar misslyckades:", err);
+    }
+  });
 }
 
 /** Hämtar nyheter (+ AI-filter) och poddavsnitt. Körs en gång/dygn (22:00) —
- * täcker båda poddarnas släpp (Nykritat tors, Fotbollsviken fre). */
-export async function syncNewsAndFilter() {
-  const { syncNews } = await import("./news");
-  await syncNews();
-  const { filterRelevance } = await import("./relevance");
-  await filterRelevance();
-  const { syncPodcasts } = await import("./podcasts");
-  await syncPodcasts();
-  // Bakåtfyllnad: läser redan hämtade artiklar (bredare recall än DV:s
-  // sektionslista i syncGoals) för att hitta målskyttar i rubrik/ingress.
-  try {
-    const { syncGoalsFromArticles } = await import("./goals");
-    await syncGoalsFromArticles();
-  } catch (err) {
-    console.error("[sync] artikel-baserade målskyttar misslyckades:", err);
-  }
+ * täcker båda poddarnas släpp (Nykritat tors, Fotbollsviken fre).
+ * Returnerar false om en nyhetssynk redan pågår. */
+export function syncNewsAndFilter(): Promise<boolean> {
+  return exclusive("news", async () => {
+    const { syncNews } = await import("./news");
+    await syncNews();
+    const { filterRelevance } = await import("./relevance");
+    await filterRelevance();
+    const { syncPodcasts } = await import("./podcasts");
+    await syncPodcasts();
+    // Bakåtfyllnad: läser redan hämtade artiklar (bredare recall än DV:s
+    // sektionslista i syncGoals) för att hitta målskyttar i rubrik/ingress.
+    try {
+      const { syncGoalsFromArticles } = await import("./goals");
+      await syncGoalsFromArticles();
+    } catch (err) {
+      console.error("[sync] artikel-baserade målskyttar misslyckades:", err);
+    }
+  });
 }
 
-/** Full synk: matcher + nyheter + filter. Används av /api/sync (manuell/cron-backup).
- * Vakt: bara en synk i taget — samtidiga anrop returnerar direkt (skyddar mot
- * överlappande körningar som annars rate-limitar Everysport). */
+/** Full synk: lag + nyheter. Används av /api/sync (manuell backup).
+ * Varje jobb har sin egen spärr, så inget körs dubbelt parallellt. */
 export async function syncAll(): Promise<{ ran: boolean }> {
-  const g = globalThis as typeof globalThis & { __kfSyncing?: boolean };
-  if (g.__kfSyncing) return { ran: false };
-  g.__kfSyncing = true;
-  try {
-    await syncMatches();
-    await syncNewsAndFilter();
-    return { ran: true };
-  } finally {
-    g.__kfSyncing = false;
-  }
+  const teams = await syncTeams();
+  const news = await syncNewsAndFilter();
+  return { ran: teams || news };
 }
 
-/** Autoseed: synkar de serier som ännu inte finns i databasen (första sidladdning). */
+/** Autoseed: synkar de serier som ännu inte finns i databasen (vid serverstart). */
 export async function ensureSynced() {
   const db = await getDb();
   for (const t of SYNC_TARGETS) {

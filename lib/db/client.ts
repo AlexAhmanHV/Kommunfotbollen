@@ -85,6 +85,10 @@ CREATE TABLE IF NOT EXISTS match_goals (
   source_url text,
   PRIMARY KEY (match_id, ord)
 );
+CREATE TABLE IF NOT EXISTS news_checked (
+  url text PRIMARY KEY,
+  checked_at timestamptz NOT NULL
+);
 CREATE TABLE IF NOT EXISTS dv_reports (
   url text PRIMARY KEY,
   match_id text,

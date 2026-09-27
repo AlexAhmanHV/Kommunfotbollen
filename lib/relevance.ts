@@ -27,7 +27,7 @@ const MODEL = "claude-haiku-4-5";
 const BATCH_SIZE = 15;
 
 // Kända lokala sportkrönikörer/-signaturer. Deras texter handlar alltid om
-// lokal fotboll men har ofta generisk rubrik + saknar ingress (Google News),
+// lokal fotboll men har ofta generisk rubrik + saknar ingress,
 // så AI-filtret slänger dem felaktigt. Släpp igenom dem utan AI-bedömning.
 const TRUSTED_BYLINES = [/\bwille hansson\b/i];
 

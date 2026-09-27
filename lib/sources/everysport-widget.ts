@@ -146,6 +146,22 @@ export class EverysportWidgetSource implements MatchSource {
     private readonly teamRefsByLeague: Record<string, string[]> = {},
   ) {}
 
+  // getLeague och getTable läser samma standings-sida. Den hämtas en gång och
+  // delas under en kort stund, så en synk inte hämtar den två gånger.
+  private readonly standingsCache = new Map<string, { at: number; pp: Promise<Record<string, unknown>> }>();
+
+  private fetchStandings(leagueRef: string) {
+    const hit = this.standingsCache.get(leagueRef);
+    if (hit && Date.now() - hit.at < 60_000) return hit.pp;
+    const pp = fetchNextData(
+      this.standingsUrl(leagueRef),
+      (p) => p.series != null && (p.standings != null || p.seriesStandings != null),
+    );
+    pp.catch(() => this.standingsCache.delete(leagueRef));
+    this.standingsCache.set(leagueRef, { at: Date.now(), pp });
+    return pp;
+  }
+
   private standingsUrl(leagueRef: string) {
     return `${WIDGET_BASE}?seriesId=${leagueRef}&type=standings`;
   }
@@ -157,10 +173,7 @@ export class EverysportWidgetSource implements MatchSource {
   }
 
   async getLeague(leagueRef: string): Promise<SourceLeague> {
-    const pp = await fetchNextData(
-      this.standingsUrl(leagueRef),
-      (p) => p.series != null,
-    );
+    const pp = await this.fetchStandings(leagueRef);
     const series = wSeries.parse(pp.series);
 
     // Lag-emblemen ligger på standings-raderna (team.logo), inte på
@@ -231,10 +244,7 @@ export class EverysportWidgetSource implements MatchSource {
   }
 
   async getTable(leagueRef: string): Promise<SourceTableRow[]> {
-    const pp = await fetchNextData(
-      this.standingsUrl(leagueRef),
-      (p) => p.standings != null || p.seriesStandings != null,
-    );
+    const pp = await this.fetchStandings(leagueRef);
     // utan teamId-param SSR:ar widgeten tabellen som `seriesStandings`
     const standings = wStandings.parse(first(pp.standings ?? pp.seriesStandings));
     const rows = standings.groups.flatMap((g) => g.standings);

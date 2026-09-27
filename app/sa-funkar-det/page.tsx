@@ -56,9 +56,9 @@ export default function SaFunkarDet() {
           tabeller och matchlistor.
         </p>
         <p>
-          Matchdata synkas automatiskt <strong>var 15:e minut</strong>, så
-          tabellägen och resultat uppdateras löpande utan att någon behöver
-          göra något manuellt.
+          Tabeller, resultat och målskyttar synkas automatiskt en gång per
+          dygn, <strong>kl 23:00</strong> efter kvällens matcher, utan att
+          någon behöver göra något manuellt.
         </p>
       </Section>
 
@@ -67,8 +67,9 @@ export default function SaFunkarDet() {
           Nyheterna kommer från de tre tidningar som faktiskt bevakar de här
           lagen: <strong>Dagens Västervik</strong>,{" "}
           <strong>Västerviks-Tidningen</strong> och{" "}
-          <strong>Vimmerby Tidning</strong>. Sajten läser deras publika
-          flöden en gång om dygnet och kopplar varje artikel till rätt lag.
+          <strong>Vimmerby Tidning</strong>. Sajten går igenom deras
+          fotbollsartiklar en gång om dygnet och kopplar varje artikel till
+          rätt lag.
         </p>
         <p>
           Bara rubrik, kort ingress och en länk sparas. Själva läsningen

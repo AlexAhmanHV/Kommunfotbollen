@@ -41,6 +41,14 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
         const g = goals.get(m.id);
         const homeScorers = g?.filter((x) => x.teamId === m.homeId).map((x) => x.player) ?? [];
         const awayScorers = g?.filter((x) => x.teamId === m.awayId).map((x) => x.player) ?? [];
+        // Målskyttar letas bara för de lokala lagens matcher — bara där är det
+        // värt att säga att de saknas, så ingen tror att något är trasigt.
+        const scorersMissing =
+          m.status === "FINISHED" &&
+          (m.homeScore ?? 0) + (m.awayScore ?? 0) > 0 &&
+          homeScorers.length === 0 &&
+          awayScorers.length === 0 &&
+          (isLocalTeam(m.homeId) || isLocalTeam(m.awayId));
         return (
           <li key={m.id} className="px-4 py-3">
             <div className="flex items-center gap-3 text-sm">
@@ -87,6 +95,12 @@ export async function MatchList({ matches }: { matches: UiMatch[] }) {
                 />
                 <span className="flex-1">{formatScorers(awayScorers)}</span>
               </div>
+            )}
+
+            {scorersMissing && (
+              <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-600">
+                Målskyttar ej rapporterade
+              </p>
             )}
           </li>
         );

@@ -1,31 +1,71 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "./db/client";
 import { articles, articleTeams, matches, matchGoals, dvReports, teams } from "./db/schema";
 import { LOCAL_TEAM_IDS, TEAM_NEWS_ALIASES } from "./local-teams";
-import { SECTIONS, type Section, extractReportUrls, fetchWithTimeout, sleep, FETCH_GAP_MS } from "./newspaper-sections";
+import {
+  PAPERS,
+  type Paper,
+  discoverArticleUrls,
+  extractArticleText,
+  fetchWithTimeout,
+  mentionsLocalTeam,
+  sleep,
+  FETCH_GAP_MS,
+} from "./newspaper-sections";
 
 // Målskyttar från fria, server-renderade matchrapporter — Dagens Västervik
 // OCH Vimmerby Tidning (verifierat fri från betalvägg, till skillnad från VT).
-// Flöde per tidning: skrapa fotbollssektionen (riktiga URL:er, inte RSS:ens
-// korta rullande fönster) → hämta rapporttext → AI-extrahera skyttar →
+// Flöde per tidning: hitta fotbollsartiklarna (sitemap/sektionssida, se
+// newspaper-sections.ts) → hämta texten → nämns inget lokalt lag: markera
+// läst och gå vidare → annars AI-extrahera skyttar →
 // koppla till en match i DB (kräver att BÅDE lagnamn och resultat stämmer,
 // annars ingen koppling). Fail-open: utan API-nyckel/parsningsfel hoppas steget
 // över och rapporten kan försökas igen (men bearbetade URL:er dedupas).
 
 const MODEL = "claude-haiku-4-5";
-const MAX_REPORTS_PER_RUN = 12;
+// Nya artiklar att läsa per tidning och körning. Alla fotbollsartiklar läses
+// (inte bara de med lagnamn i rubriken), så gränsen är satt för att rymma en
+// hel matchdag — och för att första körningarna ska fylla på bakåt i omgångar.
+const MAX_REPORTS_PER_RUN = 40;
+// Hur långt bak referat letas (samma fönster som nyhetslistan).
+const REPORT_WINDOW_DAYS = 60;
 
 type Db = Awaited<ReturnType<typeof getDb>>;
+
+// AI:n returnerar ibland ett mål med tomt spelarnamn trots instruktionen att
+// hoppa över dem. Släng just de målen — inte hela referatet, som annars
+// markerades bearbetat och tappades för gott.
+const namedGoalsSchema = z
+  .array(z.object({ team: z.string(), player: z.string() }))
+  .transform((goals) => goals.filter((g) => g.player.trim() !== ""));
 
 const goalSchema = z.object({
   homeTeam: z.string(),
   awayTeam: z.string(),
   homeScore: z.number().int(),
   awayScore: z.number().int(),
-  goals: z.array(z.object({ team: z.string(), player: z.string().min(1) })),
+  goals: namedGoalsSchema,
 });
+
+/** Första kompletta JSON-objektet i AI-svaret (modellen skriver ibland text efter). */
+function parseFirstJsonObject(raw: string): unknown {
+  const start = raw.indexOf("{");
+  if (start < 0) throw new Error("inget JSON-objekt i svaret");
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (inString) {
+      if (c === "\\") i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return JSON.parse(raw.slice(start, i + 1));
+  }
+  throw new Error("ofullständigt JSON-objekt i svaret");
+}
 type Extracted = z.infer<typeof goalSchema>;
 
 const SYSTEM = `Du läser en svensk lokaltidnings matchreferat om fotboll och extraherar målskyttarna.
@@ -62,14 +102,6 @@ function teamNameMatches(dbName: string, teamId: string, reported: string): bool
   return false;
 }
 
-function extractArticleText(html: string): string {
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
-  const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)]
-    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/&[a-z]+;|&#\d+;/g, " ").replace(/\s+/g, " ").trim())
-    .filter((p) => p.length > 20);
-  return `${title}\n\n${paras.join("\n")}`.slice(0, 4000);
-}
-
 export async function syncGoals(): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return; // utan nyckel: hoppa över
@@ -82,41 +114,36 @@ export async function syncGoals(): Promise<void> {
   const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
   const client = new Anthropic({ apiKey });
 
-  for (const section of SECTIONS) {
+  // VT:s brödtext ligger bakom betalvägg — dess rubriker täcks av
+  // syncGoalsFromArticles nedan.
+  for (const paper of PAPERS.filter((p) => p.bodyReadable)) {
     try {
-      await syncGoalsFromSection(db, client, teamName, now, section);
+      await syncGoalsFromPaper(db, client, teamName, now, paper);
     } catch (err) {
-      // en trasig tidningssektion ska inte stoppa den andra
-      console.error(`[goals] ${section.name}-sektionen misslyckades:`, err);
+      // en trasig tidning ska inte stoppa den andra
+      console.error(`[goals] ${paper.name} misslyckades:`, err);
     }
   }
 }
 
-async function syncGoalsFromSection(
+async function syncGoalsFromPaper(
   db: Db,
   client: Anthropic,
   teamName: Map<string, string>,
   now: Date,
-  section: Section,
+  paper: Paper,
 ): Promise<void> {
-  let sectionHtml: string;
-  try {
-    const res = await fetchWithTimeout(section.sectionUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    sectionHtml = await res.text();
-  } catch (err) {
-    console.error(`[goals] ${section.name}-sektionen gick inte att hämta:`, err);
-    return;
-  }
-
-  const urls = extractReportUrls(sectionHtml, section, MAX_REPORTS_PER_RUN);
+  const urls = await discoverArticleUrls(paper, REPORT_WINDOW_DAYS, now);
   if (urls.length === 0) return;
 
-  // hoppa över redan bearbetade URL:er (delad dedup över båda tidningarna)
+  // hoppa över redan bearbetade URL:er (delad dedup över båda tidningarna) —
+  // slå bara upp de här URL:erna, inte hela den växande tabellen
   const done = new Set(
-    (await db.select({ url: dvReports.url }).from(dvReports)).map((r) => r.url),
+    (
+      await db.select({ url: dvReports.url }).from(dvReports).where(inArray(dvReports.url, urls))
+    ).map((r) => r.url),
   );
-  const todo = urls.filter((u) => !done.has(u));
+  const todo = urls.filter((u) => !done.has(u)).slice(0, MAX_REPORTS_PER_RUN);
   if (todo.length === 0) return;
 
   for (const url of todo) {
@@ -132,6 +159,16 @@ async function syncGoalsFromSection(
       continue;
     }
 
+    // Alla fotbollsartiklar läses nu, även andra orters — bara de som nämner
+    // ett lokalt lag är värda ett AI-anrop. Markera resten som lästa.
+    if (!mentionsLocalTeam(text)) {
+      await db
+        .insert(dvReports)
+        .values({ url, matchId: null, checkedAt: now })
+        .onConflictDoNothing();
+      continue;
+    }
+
     let data: Extracted;
     try {
       const res = await client.messages.create({
@@ -144,8 +181,7 @@ async function syncGoalsFromSection(
         .filter((b) => b.type === "text")
         .map((b) => (b as { text: string }).text)
         .join("");
-      const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
-      data = goalSchema.parse(JSON.parse(json));
+      data = goalSchema.parse(parseFirstJsonObject(raw));
     } catch (err) {
       // API-/parsningsfel: markera bearbetad så vi inte betalar om och om igen
       console.error(`[goals] AI-extraktion misslyckades för ${url}:`, err);
@@ -275,14 +311,13 @@ async function linkAndStore(
 }
 
 // --- Bakåtfyllnad: skyttar ur redan hämtade nyhetsartiklar -----------------
-// Nyhetsflödet (lib/news.ts) har betydligt bredare recall än DV:s sektionslista
-// ovan — Google News hittar äldre rapporter och andra tidningar (VT, Vimmerby
-// T) vi annars inte kan läsa fulltext från. Många rubriker namnger målskytten
-// direkt ("Simon Sandholm gjorde två i Hjorted/Totebos seger"), så vi slipper
-// hämta något alls — bara läsa det vi redan har lagrat (titel + ev. ingress).
+// Nyhetslistan (lib/news.ts) innehåller även VT:s artiklar, vars brödtext
+// ligger bakom betalvägg. Många rubriker namnger målskytten direkt ("Simon
+// Sandholm gjorde två i Hjorted/Totebos seger"), så vi slipper hämta något
+// alls — bara läsa det vi redan har lagrat (titel + ev. ingress).
 //
-// Google News-länkar är bara omdirigeringar (ingen riktig URL att läsa full-
-// text från), så AI:n kan inte läsa av resultatet ur texten. Vi löser det
+// En rubrik + ingress innehåller sällan slutresultatet, så AI:n kan inte
+// läsa av det ur texten. Vi löser det
 // genom att FÖRST hitta en entydig kandidatmatch (ett taggat lag, publicerad
 // nära matchdatumet) och ge AI:n det riktiga resultatet som fakta — den
 // behöver bara läsa ut namnen, inte gissa siffror.
@@ -294,9 +329,7 @@ Regler:
 - "team" måste vara exakt ett av de två lagnamnen som anges i prompten.
 - Om texten inte namnger några målskyttar: svara {"goals":[]}.`;
 
-const articleGoalSchema = z.object({
-  goals: z.array(z.object({ team: z.string(), player: z.string().min(1) })),
-});
+const articleGoalSchema = z.object({ goals: namedGoalsSchema });
 
 // Rapporter kommer EFTER matchen, inte symmetriskt runt den — ett symmetriskt
 // fönster fångar ofta både förra och nästa omgångens match för samma lag
@@ -336,8 +369,7 @@ async function extractGoalsFromText(
     .filter((b) => b.type === "text")
     .map((b) => (b as { text: string }).text)
     .join("");
-  const json = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
-  return articleGoalSchema.parse(JSON.parse(json));
+  return articleGoalSchema.parse(parseFirstJsonObject(raw));
 }
 
 function isReportWindow(matchStartsAt: Date, publishedAt: Date): boolean {
@@ -352,10 +384,6 @@ export async function syncGoalsFromArticles(): Promise<void> {
   const db = await getDb();
   const now = new Date();
 
-  const doneUrls = new Set(
-    (await db.select({ url: dvReports.url }).from(dvReports)).map((r) => r.url),
-  );
-
   const rows = await db
     .select({
       id: articles.id,
@@ -365,7 +393,14 @@ export async function syncGoalsFromArticles(): Promise<void> {
       teamId: articleTeams.teamId,
     })
     .from(articles)
-    .innerJoin(articleTeams, eq(articleTeams.articleId, articles.id));
+    .innerJoin(articleTeams, eq(articleTeams.articleId, articles.id))
+    // redan bearbetade artiklar filtreras i databasen i stället för att hela
+    // dv_reports läses in
+    .where(
+      notExists(
+        db.select({ one: sql`1` }).from(dvReports).where(eq(dvReports.url, articles.id)),
+      ),
+    );
 
   // gruppera lag-taggar per artikel, hoppa redan bearbetade. Endast lokala
   // lag är intressanta (defensivt filter — TEAM_NEWS_ALIASES täcker redan
@@ -375,7 +410,7 @@ export async function syncGoalsFromArticles(): Promise<void> {
     { title: string; summary: string | null; publishedAt: Date; teamIds: string[] }
   >();
   for (const r of rows) {
-    if (doneUrls.has(r.id) || !LOCAL_TEAM_IDS.has(r.teamId)) continue;
+    if (!LOCAL_TEAM_IDS.has(r.teamId)) continue;
     const existing = byArticle.get(r.id);
     if (existing) existing.teamIds.push(r.teamId);
     else
@@ -459,8 +494,8 @@ export async function syncGoalsFromArticles(): Promise<void> {
     // Eskalering: titel+ingress gav FÄRRE skyttar än matchens totala målantal
     // (helt tomt, eller bara någon av dem — ingressen nämner ofta bara första
     // målskytten även när referatet räknar upp alla), och artikeln har en
-    // riktig URL vi vet kan läsas fritt (DV/Vimmerby T, inte Google News-
-    // redirect eller VT) — hämta hela texten och ge det en andra chans.
+    // URL vi vet kan läsas fritt (DV/Vimmerby T, inte VT:s betalvägg) —
+    // hämta hela texten och ge det en andra chans.
     const expectedGoals = match.homeScore + match.awayScore;
     if (parsed.goals.length < expectedGoals) {
       const fullUrl = fetchableUrl(articleId);

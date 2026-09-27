@@ -1,22 +1,22 @@
 // Körs en gång när Next.js-servern startar (dev och prod).
 // Två schemalagda jobb, appen är sin egen cron:
-//   1. Matchsynk (tabeller/resultat) var 15:e minut.
-//   2. Nyheter + AI-relevansfilter en gång per dygn kl 22:00 svensk tid.
-// /api/sync kör allt manuellt (backup / test).
+//   1. Nyheter + AI-relevansfilter en gång per dygn kl 22:00 svensk tid.
+//   2. Lagen (tabeller, matcher/resultat, målskyttar) kl 23:00 svensk tid.
+// /api/sync kör jobben manuellt (backup / test).
 
-const MATCH_INTERVAL_MS = 15 * 60 * 1000;
-const MATCH_FIRST_RUN_MS = 5 * 1000;
+const SEED_DELAY_MS = 5 * 1000;
 const NEWS_HOUR_LOCAL = 22; // 22:00 Europe/Stockholm
+const TEAMS_HOUR_LOCAL = 23; // 23:00 Europe/Stockholm
 
-/** Millisekunder till nästa kl 22:00 svensk tid. */
-function msUntilNextNewsRun(): number {
+/** Millisekunder till nästa hel timme `hour` svensk tid. */
+function msUntilNext(hour: number): number {
   const now = new Date();
   // "nu" uttryckt i svensk lokaltid
   const local = new Date(
     now.toLocaleString("en-US", { timeZone: "Europe/Stockholm" }),
   );
   const target = new Date(local);
-  target.setHours(NEWS_HOUR_LOCAL, 0, 0, 0);
+  target.setHours(hour, 0, 0, 0);
   if (target <= local) target.setDate(target.getDate() + 1);
   return target.getTime() - local.getTime();
 }
@@ -25,50 +25,54 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   const g = globalThis as typeof globalThis & {
-    __kfMatchTimer?: NodeJS.Timeout;
-    __kfNewsScheduled?: boolean;
+    __kfScheduled?: boolean;
   };
-  if (g.__kfMatchTimer) return; // HMR-vakt
+  if (g.__kfScheduled) return; // HMR-vakt
+  g.__kfScheduled = true;
 
-  const { syncMatches, syncNewsAndFilter } = await import("./lib/sync");
+  const { ensureSynced, syncNewsAndFilter, syncTeams } = await import("./lib/sync");
 
-  const runMatches = async () => {
+  const run = (label: string, job: () => Promise<boolean>) => async () => {
     const t = Date.now();
     try {
-      await syncMatches();
-      console.log(`[sync] matcher ok ${Date.now() - t}ms`);
+      const ran = await job();
+      console.log(
+        ran
+          ? `[sync] ${label} ok ${Date.now() - t}ms`
+          : `[sync] ${label} körs redan — hoppar över`,
+      );
     } catch (err) {
-      console.error("[sync] matcher misslyckades:", err);
+      console.error(`[sync] ${label} misslyckades:`, err);
     }
   };
 
-  const runNews = async () => {
-    const t = Date.now();
+  // Dagliga jobb: räkna om tiden till nästa körning efter varje körning, så
+  // klockslaget håller även över sommar-/vintertidsskiftet.
+  const daily = (hour: number, label: string, job: () => Promise<boolean>) => {
+    const runJob = run(label, job);
+    const schedule = () => {
+      const delay = msUntilNext(hour);
+      console.log(`[sync] ${label} schemalagda om ${Math.round(delay / 60000)} min (nästa ${hour}:00)`);
+      setTimeout(async () => {
+        await runJob();
+        schedule();
+      }, delay);
+    };
+    schedule();
+  };
+
+  // Strax efter start: fyll en tom databas (första deployen) så sidan inte
+  // står tom till kl 23. Finns serierna redan görs ingenting.
+  setTimeout(async () => {
     try {
-      await syncNewsAndFilter();
-      console.log(`[sync] nyheter ok ${Date.now() - t}ms`);
+      await ensureSynced();
     } catch (err) {
-      console.error("[sync] nyheter misslyckades:", err);
+      console.error("[sync] autoseed misslyckades:", err);
     }
-  };
+  }, SEED_DELAY_MS);
 
-  // Matcher: var 15:e minut, första körning strax efter start.
-  g.__kfMatchTimer = setInterval(runMatches, MATCH_INTERVAL_MS);
-  setTimeout(runMatches, MATCH_FIRST_RUN_MS);
+  daily(NEWS_HOUR_LOCAL, "nyheter", syncNewsAndFilter);
+  daily(TEAMS_HOUR_LOCAL, "lag", syncTeams);
 
-  // Nyheter: schemalägg nästa 22:00, sedan var 24:e timme.
-  const scheduleNews = () => {
-    const delay = msUntilNextNewsRun();
-    console.log(
-      `[sync] nyheter schemalagda om ${Math.round(delay / 60000)} min (nästa 22:00)`,
-    );
-    setTimeout(() => {
-      runNews();
-      setInterval(runNews, 24 * 60 * 60 * 1000);
-    }, delay);
-  };
-  g.__kfNewsScheduled = true;
-  scheduleNews();
-
-  console.log("[sync] schemalagt: matcher var 15:e min, nyheter kl 22:00");
+  console.log("[sync] schemalagt: nyheter kl 22:00, lag (tabeller, matcher, målskyttar) kl 23:00");
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/client";
-import { ensureSynced } from "@/lib/sync";
 import {
   articles,
   articleTeams,
@@ -135,10 +134,11 @@ import { MatchList } from "./components/match-list";
 import { SectionHeading } from "./components/section-heading";
 import { TeamCrest } from "./components/team-crest";
 
-export const dynamic = "force-dynamic";
+// Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
+// för att fråga databasen vid varje besök.
+export const revalidate = 60;
 
 export default async function Home() {
-  await ensureSynced();
   const db = await getDb();
 
   const allLeagues = await db.select().from(leagues).orderBy(asc(leagues.name));

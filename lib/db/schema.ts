@@ -76,7 +76,7 @@ export const matches = pgTable("matches", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
-// Nyhetsartiklar från lokaltidningarnas RSS — endast rubrik + kort ingress
+// Nyhetsartiklar från lokaltidningarna — endast rubrik + kort ingress
 // lagras; läsningen sker hos tidningen (vi länkar alltid vidare).
 export const articles = pgTable("articles", {
   id: text("id").primaryKey(), // artikelns URL — naturlig dedupe-nyckel
@@ -135,6 +135,13 @@ export const matchGoals = pgTable(
   },
   (t) => [primaryKey({ columns: [t.matchId, t.ord] })],
 );
+
+// Artikel-URL:er som nyhetssynken redan läst men inte sparat (handlade inte om
+// något bevakat lag) — så de inte hämtas om igen varje kväll.
+export const newsChecked = pgTable("news_checked", {
+  url: text("url").primaryKey(),
+  checkedAt: timestamp("checked_at", { withTimezone: true }).notNull(),
+});
 
 // Bearbetade DV-rapport-URL:er, så vi inte hämtar + AI-kör samma artikel igen.
 export const dvReports = pgTable("dv_reports", {

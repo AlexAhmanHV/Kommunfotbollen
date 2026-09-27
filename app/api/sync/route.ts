@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncAll, syncMatches, syncNewsAndFilter } from "@/lib/sync";
+import { syncAll, syncNewsAndFilter, syncTeams } from "@/lib/sync";
 
 // Manuell endpoint (backup/felsökning) — den schemalagda synken körs av
 // instrumentation.ts. Anropas t.ex. via GitHub Actions workflow_dispatch;
@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
   const target = req.nextUrl.searchParams.get("target");
   const started = Date.now();
   try {
-    if (target === "matches") {
-      await syncMatches();
+    if (target === "teams") {
+      await syncTeams();
     } else if (target === "news") {
       await syncNewsAndFilter();
     } else {

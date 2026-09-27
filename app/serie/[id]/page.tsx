@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
-import { ensureSynced } from "@/lib/sync";
 import { groups, leagues, matches, tableRows, teams } from "@/lib/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
 import { getMatches } from "@/lib/queries";
@@ -10,7 +9,9 @@ import { MatchList } from "../../components/match-list";
 import { SectionHeading } from "../../components/section-heading";
 import { TeamCrest } from "../../components/team-crest";
 
-export const dynamic = "force-dynamic";
+// Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
+// för att fråga databasen vid varje besök.
+export const revalidate = 60;
 
 const zoneStyles: Record<string, string> = {
   promotion: "border-l-2 border-emerald-500",
@@ -24,7 +25,6 @@ export default async function SeriePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await ensureSynced();
   const db = await getDb();
 
   const league = await db.query.leagues.findFirst({ where: eq(leagues.id, id) });
@@ -164,7 +164,7 @@ export default async function SeriePage({
         <SectionHeading>Spelprogram</SectionHeading>
         {allMatches.length === 0 ? (
           <p className="text-sm text-neutral-500">
-            Inga matcher i databasen ännu. Matchdata samlas in löpande vid
+            Inga matcher i databasen ännu. Matchdata samlas in varje kväll vid
             varje synk.
           </p>
         ) : (

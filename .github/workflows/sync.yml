@@ -8,10 +8,10 @@ on:
       target:
         description: 'Sync target'
         required: true
-        default: 'matches'
+        default: 'teams'
         type: choice
         options:
-          - matches
+          - teams
           - news
 
 jobs:

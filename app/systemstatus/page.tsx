@@ -154,8 +154,8 @@ export default async function SystemStatus() {
       <section>
         <SectionHeading>Senast körda jobb</SectionHeading>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <JobCard title="Matcher & tabeller" cadence="Var 15:e minut" lastRun={lastMatchSync ?? lastTableSync} />
-          <JobCard title="Målskyttar" cadence="Var 15:e minut" lastRun={lastGoalsCheck} />
+          <JobCard title="Matcher & tabeller" cadence="Dagligen, 23:00" lastRun={lastMatchSync ?? lastTableSync} />
+          <JobCard title="Målskyttar" cadence="Dagligen, 23:00" lastRun={lastGoalsCheck} />
           <JobCard title="Nyheter" cadence="Dagligen, 22:00" lastRun={lastNewsFetch} />
           <JobCard title="Poddavsnitt" cadence="Dagligen, 22:00" lastRun={lastPodcastFetch} />
         </div>
@@ -183,7 +183,7 @@ export default async function SystemStatus() {
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
           <FlowStep
             label="Källor"
-            detail="Everysport, DV, Vimmerby T, VT, Google News, poddar"
+            detail="Everysport, DV, Vimmerby T, VT, poddar"
           />
           <FlowArrow />
           <FlowStep label="AI-extraktion" detail="Claude läser matchreferat och bedömer relevans" accent />
@@ -224,17 +224,17 @@ export default async function SystemStatus() {
               Dagens Västervik &amp; Vimmerby Tidning
             </div>
             <p className="mt-1 text-sm text-neutral-400">
-              Sektionsskrapning ger riktiga artikel-URL:er, full ingress och
-              underlag för målskytte-extraktion.
+              Alla fotbollsartiklar läses (Vimmerby T via sitemap, DV via
+              fotbollssidan) och ger underlag för målskytte-extraktion.
             </p>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
             <div className="font-semibold text-emerald-400">
-              Västerviks-Tidningen &amp; Google News
+              Västerviks-Tidningen
             </div>
             <p className="mt-1 text-sm text-neutral-400">
-              Kompletterar med recall längre bak i tiden än de egna
-              sektionssidorna hinner täcka.
+              Artiklar hittas via sitemap. Brödtexten ligger bakom betalvägg,
+              så målskyttar läses bara ur rubrik och ingress.
             </p>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
