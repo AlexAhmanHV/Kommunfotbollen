@@ -4,6 +4,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { groups, leagues, matches, tableRows, teams } from "@/lib/db/schema";
 import { getMatches, isResultMissing } from "@/lib/queries";
+import { CLASS_LABEL } from "@/lib/teams";
 import { LeagueTable } from "../../components/league-table";
 import { MatchList } from "../../components/match-list";
 import { PageContainer } from "../../components/page-container";
@@ -12,14 +13,6 @@ import { SectionHeading } from "../../components/section-heading";
 // Datan ändras en gång per dygn (synken kl 22/23) — cacha sidan i stället
 // för att fråga databasen vid varje besök.
 export const revalidate = 60;
-
-const CLASS_LABEL: Record<string, string> = {
-  MEN: "Herrar",
-  WOMEN: "Damer",
-  BOYS: "Pojkar",
-  GIRLS: "Flickor",
-  MIX: "Mix",
-};
 
 function SubHeading({ children }: { children: React.ReactNode }) {
   return (

@@ -62,7 +62,7 @@ function TeamCard({ team, index }: { team: TeamSummary; index: number }) {
           />
         ) : (
           <div
-            className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]"
+            className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,var(--color-line-dark),var(--color-surface-dark))]"
             aria-hidden
           >
             <div className="opacity-15">

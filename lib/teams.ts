@@ -16,6 +16,14 @@ export const TEAM_SLUGS: Record<string, string> = {
 
 const ID_BY_SLUG = new Map(Object.entries(TEAM_SLUGS).map(([id, slug]) => [slug, id]));
 
+export const CLASS_LABEL: Record<string, string> = {
+  MEN: "Herrar",
+  WOMEN: "Damer",
+  BOYS: "Pojkar",
+  GIRLS: "Flickor",
+  MIX: "Mix",
+};
+
 export function teamSlug(teamId: string): string | null {
   return TEAM_SLUGS[teamId] ?? null;
 }

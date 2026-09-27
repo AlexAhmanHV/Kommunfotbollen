@@ -61,6 +61,7 @@ export default async function LagPage({ params }: { params: Promise<{ slug: stri
         logoUrl: teams.logoUrl,
         leagueId: leagues.id,
         leagueName: leagues.name,
+        teamClass: leagues.teamClass,
         groupId: tableRows.groupId,
         position: tableRows.position,
         pts: tableRows.pts,
@@ -124,7 +125,7 @@ export default async function LagPage({ params }: { params: Promise<{ slug: stri
   return (
     <>
       <section className="bg-surface-dark text-on-dark">
-        <TeamHero team={summary} />
+        <TeamHero team={summary} teamClass={team.teamClass} />
         <div className="mx-auto grid max-w-5xl gap-3 px-4 pb-10 md:grid-cols-[1.3fr_1fr]">
           <NextMatchBox next={summary.next} leagueName={team.leagueName} />
           <TableExcerptBox rows={tableExcerpt(groupTable, teamId)} teamId={teamId} leagueId={team.leagueId} />
@@ -134,7 +135,7 @@ export default async function LagPage({ params }: { params: Promise<{ slug: stri
       <div className="mx-auto grid max-w-5xl gap-10 px-4 py-12 lg:grid-cols-[2fr_1fr]">
         <section className="reveal space-y-6">
           <SectionHeading>Matcher</SectionHeading>
-          {teamMatches.length === 0 && (
+          {upcoming.length + played.length === 0 && (
             <p className="text-sm text-ink-muted">Inga matcher inlästa ännu.</p>
           )}
           {upcoming.length > 0 && (

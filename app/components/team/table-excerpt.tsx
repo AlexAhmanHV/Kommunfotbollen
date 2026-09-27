@@ -19,10 +19,19 @@ export function TableExcerptBox({
         <p className="mt-3 text-sm text-on-dark-muted">Ingen tabell inläst.</p>
       ) : (
         <table className="mt-2 w-full text-sm tabular-nums">
+          <caption className="sr-only">Placering, lag och poäng</caption>
+          <thead className="sr-only">
+            <tr>
+              <th>Placering</th>
+              <th>Lag</th>
+              <th>Poäng</th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((r) => (
               <tr
                 key={r.teamId}
+                aria-current={r.teamId === teamId ? "true" : undefined}
                 className={`border-t border-line-dark first:border-t-0 ${
                   r.teamId === teamId ? "bg-accent/10 font-bold" : ""
                 }`}

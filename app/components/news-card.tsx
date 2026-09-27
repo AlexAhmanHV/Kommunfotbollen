@@ -41,7 +41,7 @@ export function NewsCard({ a }: { a: NewsArticle }) {
       href={a.id}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-xl bg-surface-dark p-5 text-on-dark transition-colors hover:bg-surface-dark-raised"
+      className="block rounded-xl bg-surface-dark p-5 text-on-dark transition-colors hover:bg-surface-dark-raised focus-visible:outline-offset-[-3px]"
     >
       <NewsTags names={a.teamNames} />
       <h3 className="mt-3 font-display text-2xl font-extrabold uppercase leading-none sm:text-3xl">

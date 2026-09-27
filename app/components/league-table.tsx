@@ -19,9 +19,10 @@ export type LeagueTableRow = {
 
 // Zonkant längst till vänster, från Everysports zonstreck.
 const ZONE: Record<string, string> = {
-  promotion: "shadow-[inset_3px_0_0_#c6f432]",
-  playoff: "shadow-[inset_3px_0_0_rgb(198_244_50/0.45)]",
-  relegation: "shadow-[inset_3px_0_0_#ff5a5a]",
+  promotion: "shadow-[inset_3px_0_0_var(--color-accent)]",
+  playoff:
+    "shadow-[inset_3px_0_0_color-mix(in_srgb,var(--color-accent)_45%,transparent)]",
+  relegation: "shadow-[inset_3px_0_0_var(--color-danger)]",
 };
 
 // Seriens tabell som resultattavla i den mörka zonen. Lokala lag i fetstil
@@ -30,7 +31,12 @@ export function LeagueTable({ rows }: { rows: LeagueTableRow[] }) {
   const hasZones = rows.some((r) => r.positionStatus);
   return (
     <div>
-      <div className="overflow-x-auto rounded-xl bg-surface-dark-raised">
+      <div
+        className="overflow-x-auto rounded-xl bg-surface-dark-raised"
+        tabIndex={0}
+        role="region"
+        aria-label="Tabell"
+      >
         <table className="w-full min-w-[520px] text-sm tabular-nums">
           <thead>
             <tr className="text-[10px] font-semibold uppercase tracking-widest text-on-dark-muted">
@@ -93,7 +99,7 @@ export function LeagueTable({ rows }: { rows: LeagueTableRow[] }) {
             <span className="h-3 w-1 bg-accent/45" aria-hidden /> kval
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-3 w-1 bg-[#ff5a5a]" aria-hidden /> nedflyttning
+            <span className="h-3 w-1 bg-[var(--color-danger)]" aria-hidden /> nedflyttning
           </span>
         </p>
       )}

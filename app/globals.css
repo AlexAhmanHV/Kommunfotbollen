@@ -23,6 +23,7 @@
   --color-ink-muted: #565459;
   --color-accent: #c6f432; /* text på mörkt, bara fyllning på ljust */
   --color-form-draw: #4a515c;
+  --color-danger: #ff5a5a;
 }
 
 @theme inline {

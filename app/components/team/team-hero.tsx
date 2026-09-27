@@ -1,12 +1,13 @@
 import Image from "next/image";
 import type { TeamSummary } from "@/lib/matchday";
 import { teamImage } from "@/lib/team-images";
+import { CLASS_LABEL } from "@/lib/teams";
 import { FormBadges } from "../home/team-grid";
 import { TeamCrest } from "../team-crest";
 
 // Lagsidans affisch: lagbild (eller reserv) med långsam zoom, lagnamn stort,
 // placering, poäng och form.
-export function TeamHero({ team }: { team: TeamSummary }) {
+export function TeamHero({ team, teamClass }: { team: TeamSummary; teamClass: string | null }) {
   const image = teamImage(team.teamId);
   return (
     <div className="relative isolate overflow-hidden">
@@ -15,7 +16,7 @@ export function TeamHero({ team }: { team: TeamSummary }) {
           <Image src={image} alt="" fill sizes="100vw" className="kenburns object-cover" />
         ) : (
           <div
-            className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,#2a2f38,#0e1116)]"
+            className="absolute inset-0 grid place-items-center bg-[linear-gradient(160deg,var(--color-line-dark),var(--color-surface-dark))]"
             aria-hidden
           >
             <div className="opacity-15">
@@ -25,7 +26,7 @@ export function TeamHero({ team }: { team: TeamSummary }) {
         )}
       </div>
       <div
-        className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,#0e1116_5%,rgb(14_17_22/0.25)_70%)]"
+        className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,var(--color-surface-dark)_5%,color-mix(in_srgb,var(--color-surface-dark)_25%,transparent)_70%)]"
         aria-hidden
       />
       <div className="mx-auto flex max-w-5xl flex-wrap items-end gap-4 px-4 pb-8 pt-28 sm:pt-40">
@@ -34,6 +35,7 @@ export function TeamHero({ team }: { team: TeamSummary }) {
           {team.leagueName && (
             <p className="text-xs font-semibold uppercase tracking-widest text-on-dark-muted">
               {team.leagueName}
+              {teamClass && ` · ${CLASS_LABEL[teamClass] ?? teamClass}`}
             </p>
           )}
           <h1 className="font-display text-5xl font-extrabold uppercase leading-none sm:text-6xl">
