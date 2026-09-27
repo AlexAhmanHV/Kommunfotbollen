@@ -17,11 +17,26 @@ const timeFmt = new Intl.DateTimeFormat("sv-SE", {
 });
 
 // Ena halvan av affischen: lagbilden med långsam zoom, eller en mörk gradient
-// med lagets emblem stort och svagt när bild saknas.
-function HeroHalf({ teamId, name, logoUrl }: { teamId: string; name: string; logoUrl: string | null }) {
+// med lagets emblem stort och svagt när bild saknas. Halvorna är 60 % breda
+// och tonas ut mot mitten, så att de glider in i varandra utan skarp kant.
+function HeroHalf({
+  teamId,
+  name,
+  logoUrl,
+  side,
+}: {
+  teamId: string;
+  name: string;
+  logoUrl: string | null;
+  side: "left" | "right";
+}) {
   const image = teamImage(teamId);
+  const placement =
+    side === "left"
+      ? "left-0 [mask-image:linear-gradient(to_right,black_66%,transparent)]"
+      : "right-0 [mask-image:linear-gradient(to_left,black_66%,transparent)]";
   return (
-    <div className="relative overflow-hidden">
+    <div className={`absolute inset-y-0 w-3/5 overflow-hidden ${placement}`}>
       {image ? (
         <Image src={image} alt="" fill unoptimized className="kenburns object-cover" />
       ) : (
@@ -103,9 +118,9 @@ export function MatchdayHero({
   return (
     <div className="relative isolate overflow-hidden">
       <h1 className="sr-only">{h1Text}</h1>
-      <div className="absolute inset-0 -z-10 grid grid-cols-2">
-        <HeroHalf teamId={featured.homeId} name={featured.homeName} logoUrl={featured.homeLogo} />
-        <HeroHalf teamId={featured.awayId} name={featured.awayName} logoUrl={featured.awayLogo} />
+      <div className="absolute inset-0 -z-10">
+        <HeroHalf side="left" teamId={featured.homeId} name={featured.homeName} logoUrl={featured.homeLogo} />
+        <HeroHalf side="right" teamId={featured.awayId} name={featured.awayName} logoUrl={featured.awayLogo} />
       </div>
       <div className="hero-shade absolute inset-0 -z-10" aria-hidden />
       <div className="mx-auto max-w-5xl px-4 pb-8 pt-16 sm:pt-24">
