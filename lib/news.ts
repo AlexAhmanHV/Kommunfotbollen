@@ -6,6 +6,7 @@ import { TEAM_NEWS_ALIASES } from "./local-teams";
 import {
   PAPERS,
   discoverArticleUrls,
+  isRobotArticle,
   extractArticleText,
   fetchWithTimeout,
   sleep,
@@ -303,9 +304,16 @@ async function syncPaper(db: Db, now: Date, paper: (typeof PAPERS)[number]) {
       console.error(`[news] kunde inte läsa ${url}:`, err);
       continue;
     }
+    // fotbollssidorna listar ibland gamla artiklar (t.ex. från 2022) — markera
+    // dem som lästa så de inte hämtas om varje natt
+    const tooOld =
+      meta.publishedAt !== null &&
+      now.getTime() - new Date(meta.publishedAt).getTime() > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000;
     const teamIds =
+      !tooOld &&
       meta.title &&
       !isJunkTitle(meta.title) &&
+      !isRobotArticle(html) && // robotreferat hör inte hemma i nyhetslistan
       !isOtherSport(`${meta.title} ${meta.summary ?? ""}`) &&
       !isLiveMatchPlaceholder(url, meta.title)
         ? // brödtexten räknas också: många rubriker nämner inte laget alls

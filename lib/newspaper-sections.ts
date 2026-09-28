@@ -8,6 +8,8 @@ import { decodeEntities } from "./html-entities";
 //    artikel per månad. Fullständig, till skillnad från sektionssidan som bara
 //    visar de senaste.
 //  - Sektionssida (DV): DV:s sitemap är spärrad (403), så fotbollssidan läses.
+// Sitemap-tidningarnas fotbollssida läses också: VT:s sitemap kan stå still i
+// ett dygn (en artikel 27/9 15:15 missades när sitemapen stannat 07:18).
 // VT har betalvägg: rubrik + ingress går att läsa, brödtexten inte — därför
 // används VT aldrig för målskytte-extraktion ur fulltext.
 
@@ -30,6 +32,10 @@ export type Paper =
       kind: "sitemap";
       /** Månadens sitemap, t.ex. .../sitemap-2026-9.xml */
       sitemapUrl: (year: number, month: number) => string;
+      /** Fotbollssidan, reserv när sitemapen ligger efter. */
+      sectionUrl: string;
+      baseUrl: string;
+      urlPattern: RegExp;
     });
 
 export const PAPERS: Paper[] = [
@@ -46,12 +52,18 @@ export const PAPERS: Paper[] = [
     kind: "sitemap",
     bodyReadable: true,
     sitemapUrl: (y, m) => `https://www.vimmerbytidning.se/sitemap/sitemap-${y}-${m}.xml`,
+    sectionUrl: "https://www.vimmerbytidning.se/sport/fotboll/",
+    baseUrl: "https://www.vimmerbytidning.se",
+    urlPattern: /\/sport\/fotboll\/artikel\/[a-z0-9-]+\/[a-z0-9]+/g,
   },
   {
     name: "Västerviks-Tidningen",
     kind: "sitemap",
     bodyReadable: false,
     sitemapUrl: (y, m) => `https://www.vt.se/sitemap/sitemap-${y}-${m}.xml`,
+    sectionUrl: "https://www.vt.se/sport/fotboll/",
+    baseUrl: "https://www.vt.se",
+    urlPattern: /\/sport\/fotboll\/artikel\/[a-z0-9-]+\/[a-z0-9]+/g,
   },
 ];
 
@@ -140,10 +152,16 @@ function monthsCovering(days: number, now: Date): [number, number][] {
   return out;
 }
 
+async function sectionUrls(paper: { sectionUrl: string; baseUrl: string; urlPattern: RegExp }) {
+  const html = await fetchText(paper.sectionUrl);
+  return [...html.matchAll(paper.urlPattern)].map((m) => paper.baseUrl + m[0]);
+}
+
 /**
  * Tidningens artikel-URL:er om fotboll eller de lokala lagen, nyast först.
- * Sitemap: publicerade de senaste `maxAgeDays` dagarna. Sektionssida: allt
- * som listas där (den visar bara de senaste ändå).
+ * Sitemap: publicerade de senaste `maxAgeDays` dagarna, plus allt på
+ * fotbollssidan (först, den visar de senaste). Sektionssida: allt som listas
+ * där (den visar bara de senaste ändå).
  */
 export async function discoverArticleUrls(
   paper: Paper,
@@ -151,9 +169,14 @@ export async function discoverArticleUrls(
   now = new Date(),
 ): Promise<string[]> {
   if (paper.kind === "section") {
-    const html = await fetchText(paper.sectionUrl);
-    const urls = [...html.matchAll(paper.urlPattern)].map((m) => paper.baseUrl + m[0]);
-    return [...new Set(urls)];
+    return [...new Set(await sectionUrls(paper))];
+  }
+
+  let fromSection: string[] = [];
+  try {
+    fromSection = await sectionUrls(paper);
+  } catch (err) {
+    console.error(`[papers] ${paper.name} fotbollssidan gick inte att hämta:`, err);
   }
 
   const cutoff = now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000;
@@ -175,5 +198,12 @@ export async function discoverArticleUrls(
     }
   }
   entries.sort((a, b) => b.lastmod - a.lastmod);
-  return [...new Set(entries.map((e) => e.url))];
+  return [...new Set([...fromSection, ...entries.map((e) => e.url)])];
+}
+
+/** Automatiskt matchreferat från United Robots (VT, Vimmerby T). Känns igen
+ * på nyckelordet "United Robots" i artikelns JSON-LD; sidornas gemensamma
+ * tagglista innehåller bara "United Robots Sport". */
+export function isRobotArticle(html: string): boolean {
+  return html.includes('"United Robots"');
 }
