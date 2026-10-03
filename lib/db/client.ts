@@ -117,7 +117,10 @@ async function createDb(): Promise<Db> {
       "DATABASE_URL saknas — sätt den i .env.local (dev) eller som miljövariabel (prod).",
     );
   }
-  const client = postgres(connectionString, { prepare: false });
+  // Supabase-poolern (session mode) tillåter 15 klienter totalt, delat
+  // mellan den körande servern och ett bygge som pågår samtidigt (som
+  // förrenderar startsidan). postgres() öppnar annars upp till 10 per process.
+  const client = postgres(connectionString, { prepare: false, max: 5 });
   const db = drizzle(client, { schema });
   await db.execute(sql.raw(DDL));
   return db;
