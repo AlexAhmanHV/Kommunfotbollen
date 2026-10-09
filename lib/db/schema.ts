@@ -5,6 +5,7 @@ import {
   boolean,
   timestamp,
   primaryKey,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // Sportdata-zonen: skrivs ENDAST av synken (lib/sync.ts).
@@ -191,3 +192,18 @@ export const tableRows = pgTable(
   },
   (t) => [primaryKey({ columns: [t.groupId, t.teamId] })],
 );
+
+// Matchradion: ett AI-genererat radioavsnitt per vecka (lib/radio). Id är
+// ISO-veckonyckeln ("2026-W41"), så jobbet är idempotent. `standings` är de
+// lokala lagens placering när avsnittet gjordes — table_rows har ingen
+// historik, så nästa avsnitt jämför mot den här ögonblicksbilden.
+export const radioEpisodes = pgTable("radio_episodes", {
+  id: text("id").primaryKey(),
+  weekStart: timestamp("week_start", { withTimezone: true }).notNull(),
+  script: text("script").notNull(),
+  audioUrl: text("audio_url").notNull(),
+  standings: jsonb("standings")
+    .$type<Record<string, { position: number; pts: number }>>()
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});

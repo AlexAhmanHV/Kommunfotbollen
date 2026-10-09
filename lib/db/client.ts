@@ -114,6 +114,14 @@ CREATE TABLE IF NOT EXISTS table_rows (
   computed_at timestamptz NOT NULL,
   PRIMARY KEY (group_id, team_id)
 );
+CREATE TABLE IF NOT EXISTS radio_episodes (
+  id text PRIMARY KEY,
+  week_start timestamptz NOT NULL,
+  script text NOT NULL,
+  audio_url text NOT NULL,
+  standings jsonb NOT NULL,
+  created_at timestamptz NOT NULL
+);
 `;
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
