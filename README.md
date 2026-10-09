@@ -72,6 +72,16 @@ Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbed
 
 `/api/sync` kan anropas manuellt (`?target=teams` / `?target=news`, eller inget för allt) för att köra synkjobb direkt, som backup eller för felsökning — enklast via GitHub Actions-workflowen *Sync* (manuell körning). I produktion krävs `Authorization: Bearer <CRON_SECRET>` — lokalt hoppas kontrollen över om `CRON_SECRET` inte är satt.
 
+## Matchradion
+
+Ett veckovis AI-genererat radioprogram om lokalfotbollen. Jobbet körs dagligen kl 23:30 men skapar bara ett avsnitt när veckans saknas: Claude skriver manuset utifrån veckans matcher, tabeller och verifierade citat, ElevenLabs läser upp det och ljudet läggs i Supabase Storage. Spelaren på startsidan mixar jingel och publikljud i webbläsaren.
+
+- Sätt `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `SUPABASE_URL` och `SUPABASE_SERVICE_ROLE_KEY` (plus `ANTHROPIC_API_KEY`) — saknas någon hoppas jobbet över.
+- Skapa en publik Storage-bucket med namnet `radio`.
+- `npm run radio:sounds` genererar jingel och publikljud till `public/radio/`.
+- `POST /api/sync?target=radio` kör jobbet manuellt; kräver att `CRON_SECRET` är satt.
+- ElevenLabs gratisnivå kräver attribution, därför står "Röst: ElevenLabs" under spelaren.
+
 ## Bakgrund
 
 Ett portfolioprojekt av [Alex Åhman](https://alexahman.se) — byggt för att visa upp ett komplett, källagnostiskt insamlingssystem: flera datakällor, AI-driven extraktion med strikta regler mot att gissa, och en drift som kostar noll kronor i månaden.

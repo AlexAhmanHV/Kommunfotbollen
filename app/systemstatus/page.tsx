@@ -160,7 +160,7 @@ export default async function SystemStatus() {
             <JobCard title="Målskyttar" cadence="Dagligen, 23:00" lastRun={lastGoalsCheck} />
             <JobCard title="Nyheter" cadence="Dagligen, 22:00" lastRun={lastNewsFetch} />
             <JobCard title="Poddavsnitt" cadence="Dagligen, 22:00" lastRun={lastPodcastFetch} />
-            <JobCard title="Matchradion" cadence="Veckovis, måndag 23:30" lastRun={lastRadio} />
+            <JobCard title="Matchradion" cadence="Dagligen 23:30 (nytt avsnitt veckovis)" lastRun={lastRadio} />
           </div>
         </section>
 
