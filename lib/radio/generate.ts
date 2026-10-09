@@ -15,7 +15,7 @@ import { latestRowPerTeam } from "../matchday";
 import { getMatches } from "../queries";
 import { buildEpisodeData, standingsSnapshot } from "./episode-data";
 import { writeScript } from "./script";
-import { synthesize, uploadAudio } from "./voice";
+import { storageReachable, synthesize, uploadAudio } from "./voice";
 import { lastCompletedWeek } from "./week";
 
 // Matchradion: ett avsnitt för senast avslutade vecka. Körs dagligen men gör
@@ -27,14 +27,28 @@ import { lastCompletedWeek } from "./week";
 //  - ordning manus → ljud → uppladdning → SIST raden: ett fel i något steg
 //    lämnar inget halvfärdigt avsnitt, nästa körning gör om alltihop.
 
+// Betalda försök per veckonyckel i denna process — ett ihållande fel (t.ex. fel
+// röst eller trasig lagring) ska inte bränna krediter varje natt. Nollställs vid omstart.
+const MAX_PAID_ATTEMPTS = 2;
+const paidAttempts = new Map<string, number>();
+
 export async function generateEpisode(now: Date = new Date()): Promise<void> {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const elevenKey = process.env.ELEVENLABS_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, "");
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const missing = [
+    ["ANTHROPIC_API_KEY", anthropicKey],
+    ["ELEVENLABS_API_KEY", elevenKey],
+    ["ELEVENLABS_VOICE_ID", voiceId],
+    ["SUPABASE_URL", supabaseUrl],
+    ["SUPABASE_SERVICE_ROLE_KEY", serviceKey],
+  ]
+    .filter(([, v]) => !v)
+    .map(([name]) => name);
   if (!anthropicKey || !elevenKey || !voiceId || !supabaseUrl || !serviceKey) {
-    console.log("[radio] hoppar över: nycklar saknas (Anthropic, ElevenLabs eller Supabase)");
+    console.log(`[radio] hoppar över: nycklar saknas (${missing.join(", ")})`);
     return;
   }
 
@@ -46,6 +60,10 @@ export async function generateEpisode(now: Date = new Date()): Promise<void> {
     .where(eq(radioEpisodes.id, week.key))
     .limit(1);
   if (existing.length > 0) return;
+  if ((paidAttempts.get(week.key) ?? 0) >= MAX_PAID_ATTEMPTS) {
+    console.log(`[radio] ${week.key}: hoppar över, ${MAX_PAID_ATTEMPTS} misslyckade försök — väntar på omstart`);
+    return;
+  }
 
   const localIds = [...LOCAL_TEAM_IDS];
   const [localMatches, tableData, previousRows] = await Promise.all([
@@ -120,6 +138,14 @@ export async function generateEpisode(now: Date = new Date()): Promise<void> {
     return;
   }
 
+  // Kolla lagringen INNAN något betalt anrop görs
+  const reachable = await storageReachable(supabaseUrl, serviceKey);
+  if (reachable !== true) {
+    console.log(`[radio] hoppar över: Storage-bucketen radio nås inte (${reachable})`);
+    return;
+  }
+
+  paidAttempts.set(week.key, (paidAttempts.get(week.key) ?? 0) + 1);
   const script = await writeScript(data, anthropicKey);
   const audio = await synthesize(script, elevenKey, voiceId);
   const audioUrl = await uploadAudio(week.key, audio, supabaseUrl, serviceKey);
