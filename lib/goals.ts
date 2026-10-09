@@ -233,7 +233,7 @@ async function processReports(
       continue;
     }
 
-    const matchId = await linkAndStore(db, data, url, teamName, now);
+    const matchId = await linkAndStore(db, data, url, teamName);
     await db
       .insert(dvReports)
       .values({ url, matchId, checkedAt: now })
@@ -248,7 +248,6 @@ async function linkAndStore(
   data: Extracted,
   url: string,
   teamName: Map<string, string>,
-  now: Date,
 ): Promise<string | null> {
   if (data.goals.length === 0 && data.homeScore === 0 && data.awayScore === 0) {
     return null; // inte ett matchreferat

@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Original-lagbilder (förminskade versioner ligger i public/images/lag)
 /bilder/
+
+# local dev server log
+dev.log

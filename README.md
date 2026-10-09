@@ -10,11 +10,11 @@ Ett hyperlokalt nav för fotbollen i Västervik med omnejd: tabeller, resultat, 
 
 <img src="docs/screenshots/news.png" width="700" alt="AI-filtrerade nyheter om lagen, taggade per lag" />
 
-<img src="docs/screenshots/standings.png" width="700" alt="Serietabell med spelprogram" />
+<img src="docs/screenshots/standings.png" width="700" alt="Serietabell för Division 3 nordöstra Götaland" />
 
 ## Vad appen gör
 
-- **Tabeller & matcher** — hämtas från Everysport för fyra lokala serier, synkas dagligen kl 23:00.
+- **Tabeller & matcher** — hämtas från Everysport för fem lokala serier, synkas dagligen kl 23:00.
 - **Målskyttar** — Everysport saknar målskyttar på den här nivån, så appen skrapar lokaltidningarnas (Dagens Västervik, Vimmerby Tidning) matchreferat direkt och läser ut vem som gjorde mål med Claude, med matchens redan kända resultat som facit för att undvika gissningar.
 - **Nyheter** — artiklar om de lokala lagen samlas in från Dagens Västervik, Vimmerby Tidning och Västerviks-Tidningen (via tidningarnas sitemaps respektive DV:s fotbollssida), med dubblettfiltrering och AI-relevansbedömning som avgör om en artikel faktiskt handlar om ett bevakat lag.
 - **Poddar** — episoder från de lokala fotbollspoddarna Nykritat och Fotbollsviken.
