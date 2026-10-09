@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { articles, dvReports, matches, matchGoals, podcastEpisodes, tableRows, teams, leagues } from "@/lib/db/schema";
+import { articles, dvReports, matches, matchGoals, podcastEpisodes, radioEpisodes, tableRows, teams, leagues } from "@/lib/db/schema";
 import { SectionHeading } from "../components/section-heading";
 import { PageContainer } from "../components/page-container";
 import { PageHeader } from "../components/page-header";
@@ -123,6 +123,7 @@ export default async function SystemStatus() {
     lastGoalsCheck,
     lastNewsFetch,
     lastPodcastFetch,
+    lastRadio,
     matchCount,
     leagueCount,
     teamCount,
@@ -135,6 +136,7 @@ export default async function SystemStatus() {
     getMax(db.select({ m: sql<Date | null>`max(${dvReports.checkedAt})` }).from(dvReports)),
     getMax(db.select({ m: sql<Date | null>`max(${articles.fetchedAt})` }).from(articles)),
     getMax(db.select({ m: sql<Date | null>`max(${podcastEpisodes.fetchedAt})` }).from(podcastEpisodes)),
+    getMax(db.select({ m: sql<Date | null>`max(${radioEpisodes.createdAt})` }).from(radioEpisodes)),
     db.select({ n: sql<number>`count(*)` }).from(matches).then((r) => Number(r[0]?.n ?? 0)),
     db.select({ n: sql<number>`count(*)` }).from(leagues).then((r) => Number(r[0]?.n ?? 0)),
     db.select({ n: sql<number>`count(*)` }).from(teams).then((r) => Number(r[0]?.n ?? 0)),
@@ -158,6 +160,7 @@ export default async function SystemStatus() {
             <JobCard title="Målskyttar" cadence="Dagligen, 23:00" lastRun={lastGoalsCheck} />
             <JobCard title="Nyheter" cadence="Dagligen, 22:00" lastRun={lastNewsFetch} />
             <JobCard title="Poddavsnitt" cadence="Dagligen, 22:00" lastRun={lastPodcastFetch} />
+            <JobCard title="Matchradion" cadence="Veckovis, måndag 23:30" lastRun={lastRadio} />
           </div>
         </section>
 

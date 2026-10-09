@@ -288,6 +288,16 @@ export function syncNewsAndFilter(): Promise<boolean> {
   });
 }
 
+/** Matchradion: veckans avsnitt (lib/radio). Körs dagligen 23:30 men gör bara
+ * något när senast avslutade veckans avsnitt saknas.
+ * Returnerar false om en radiokörning redan pågår. */
+export function syncRadio(): Promise<boolean> {
+  return exclusive("radio", async () => {
+    const { generateEpisode } = await import("./radio/generate");
+    await generateEpisode();
+  });
+}
+
 /** Full synk: lag + nyheter. Används av /api/sync (manuell backup).
  * Varje jobb har sin egen spärr, så inget körs dubbelt parallellt. */
 export async function syncAll(): Promise<{ ran: boolean }> {

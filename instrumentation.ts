@@ -1,22 +1,24 @@
 // Körs en gång när Next.js-servern startar (dev och prod).
-// Två schemalagda jobb, appen är sin egen cron:
+// Tre schemalagda jobb, appen är sin egen cron:
 //   1. Nyheter + AI-relevansfilter en gång per dygn kl 22:00 svensk tid.
 //   2. Lagen (tabeller, matcher/resultat, målskyttar) kl 23:00 svensk tid.
+//   3. Matchradion kl 23:30 (gör bara något när veckans avsnitt saknas).
 // /api/sync kör jobben manuellt (backup / test).
 
 const SEED_DELAY_MS = 5 * 1000;
 const NEWS_HOUR_LOCAL = 22; // 22:00 Europe/Stockholm
 const TEAMS_HOUR_LOCAL = 23; // 23:00 Europe/Stockholm
+const RADIO_TIME_LOCAL = { hour: 23, minute: 30 }; // efter lagsynken
 
-/** Millisekunder till nästa hel timme `hour` svensk tid. */
-function msUntilNext(hour: number): number {
+/** Millisekunder till nästa `hour`:`minute` svensk tid. */
+function msUntilNext(hour: number, minute = 0): number {
   const now = new Date();
   // "nu" uttryckt i svensk lokaltid
   const local = new Date(
     now.toLocaleString("en-US", { timeZone: "Europe/Stockholm" }),
   );
   const target = new Date(local);
-  target.setHours(hour, 0, 0, 0);
+  target.setHours(hour, minute, 0, 0);
   if (target <= local) target.setDate(target.getDate() + 1);
   return target.getTime() - local.getTime();
 }
@@ -30,7 +32,7 @@ export async function register() {
   if (g.__kfScheduled) return; // HMR-vakt
   g.__kfScheduled = true;
 
-  const { ensureSynced, syncNewsAndFilter, syncTeams } = await import("./lib/sync");
+  const { ensureSynced, syncNewsAndFilter, syncRadio, syncTeams } = await import("./lib/sync");
 
   const run = (label: string, job: () => Promise<boolean>) => async () => {
     const t = Date.now();
@@ -48,11 +50,12 @@ export async function register() {
 
   // Dagliga jobb: räkna om tiden till nästa körning efter varje körning, så
   // klockslaget håller även över sommar-/vintertidsskiftet.
-  const daily = (hour: number, label: string, job: () => Promise<boolean>) => {
+  const daily = (hour: number, label: string, job: () => Promise<boolean>, minute = 0) => {
     const runJob = run(label, job);
+    const at = `${hour}:${String(minute).padStart(2, "0")}`;
     const schedule = () => {
-      const delay = msUntilNext(hour);
-      console.log(`[sync] ${label} schemalagda om ${Math.round(delay / 60000)} min (nästa ${hour}:00)`);
+      const delay = msUntilNext(hour, minute);
+      console.log(`[sync] ${label} schemalagda om ${Math.round(delay / 60000)} min (nästa ${at})`);
       setTimeout(async () => {
         await runJob();
         schedule();
@@ -73,6 +76,9 @@ export async function register() {
 
   daily(NEWS_HOUR_LOCAL, "nyheter", syncNewsAndFilter);
   daily(TEAMS_HOUR_LOCAL, "lag", syncTeams);
+  daily(RADIO_TIME_LOCAL.hour, "radio", syncRadio, RADIO_TIME_LOCAL.minute);
 
-  console.log("[sync] schemalagt: nyheter kl 22:00, lag (tabeller, matcher, målskyttar) kl 23:00");
+  console.log(
+    "[sync] schemalagt: nyheter kl 22:00, lag (tabeller, matcher, målskyttar) kl 23:00, radio kl 23:30",
+  );
 }
