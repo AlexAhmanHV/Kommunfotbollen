@@ -75,3 +75,7 @@ Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbed
 ## Bakgrund
 
 Ett portfolioprojekt av [Alex Åhman](https://alexahman.se) — byggt för att visa upp ett komplett, källagnostiskt insamlingssystem: flera datakällor, AI-driven extraktion med strikta regler mot att gissa, och en drift som kostar noll kronor i månaden.
+
+## Licens
+
+Koden är licensierad under [MIT](LICENSE). Lagbilder, klubbloggor och innehåll från tidningar och poddar tillhör respektive upphovsperson och omfattas inte av licensen.
