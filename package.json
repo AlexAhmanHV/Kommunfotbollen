@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test \"lib/**/*.test.ts\"",
-    "images:lag": "tsx scripts/optimize-team-images.mts"
+    "images:lag": "tsx scripts/optimize-team-images.mts",
+    "radio:sounds": "tsx --env-file=.env scripts/generate-radio-sounds.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
