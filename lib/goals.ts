@@ -53,12 +53,14 @@ const quotesSchema = z
   .array(
     z.object({
       speaker: z.string(),
-      role: z.string().default(""),
-      team: z.string().default(""),
+      role: z.string().nullish().transform((v) => v ?? ""),
+      team: z.string().nullish().transform((v) => v ?? ""),
       quote: z.string(),
     }),
   )
-  .default([]);
+  .default([])
+  // Fel i citaten får aldrig fälla hela svaret — då förlorades skyttarna för gott
+  .catch([]);
 
 const goalSchema = z.object({
   homeTeam: z.string(),
@@ -187,6 +189,7 @@ export async function reextractReports(urls: string[]): Promise<void> {
 
   const db = await getDb();
   await db.delete(matchGoals).where(inArray(matchGoals.sourceUrl, urls));
+  await db.delete(matchQuotes).where(inArray(matchQuotes.sourceUrl, urls));
   await db.delete(dvReports).where(inArray(dvReports.url, urls));
 
   const allTeams = await db.select({ id: teams.id, name: teams.name }).from(teams);
