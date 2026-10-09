@@ -7,6 +7,7 @@ import {
   leagues,
   matches,
   podcastEpisodes,
+  radioEpisodes,
   tableRows,
   teams,
 } from "@/lib/db/schema";
@@ -24,6 +25,7 @@ import { MAX_ARTICLE_AGE_DAYS } from "@/lib/news";
 import { getMatches } from "@/lib/queries";
 import { MatchdayHero } from "./components/home/matchday-hero";
 import { NewsFeed, type NewsArticle } from "./components/home/news-feed";
+import type { RadioEpisodeView } from "./components/home/radio-player";
 import { RoundStrip } from "./components/home/round-strip";
 import { Sidebar, type PodcastGroup } from "./components/home/sidebar";
 import { TeamGrid } from "./components/home/team-grid";
@@ -51,12 +53,30 @@ function newsCutoff(): Date {
   return new Date(Date.now() - MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000);
 }
 
+const radioDateFmt = new Intl.DateTimeFormat("sv-SE", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Stockholm",
+});
+
+/** "Vecka 41" + "5 okt. – 11 okt." för senaste avsnittet. */
+function radioView(row: { id: string; weekStart: Date; script: string; audioUrl: string }): RadioEpisodeView {
+  // +6,5 dygn landar säkert på söndagen även veckan sommartiden slutar
+  const sunday = new Date(row.weekStart.getTime() + 6.5 * 24 * 60 * 60 * 1000);
+  return {
+    title: `Vecka ${Number(row.id.slice(6))}`,
+    dateLabel: `${radioDateFmt.format(row.weekStart)} – ${radioDateFmt.format(sunday)}`,
+    audioUrl: row.audioUrl,
+    script: row.script,
+  };
+}
+
 export default async function Home() {
   const db = await getDb();
   const now = matchdayNow();
   const localIds = [...LOCAL_TEAM_IDS];
 
-  const [allLeagues, localTeamRows, standingRows, localMatches, newsRows, podRows] =
+  const [allLeagues, localTeamRows, standingRows, localMatches, newsRows, podRows, radioRows] =
     await Promise.all([
       db.select({ id: leagues.id, name: leagues.name }).from(leagues).orderBy(asc(leagues.name)),
       db
@@ -117,6 +137,16 @@ export default async function Home() {
         })
         .from(podcastEpisodes)
         .orderBy(desc(podcastEpisodes.publishedAt)),
+      db
+        .select({
+          id: radioEpisodes.id,
+          weekStart: radioEpisodes.weekStart,
+          script: radioEpisodes.script,
+          audioUrl: radioEpisodes.audioUrl,
+        })
+        .from(radioEpisodes)
+        .orderBy(desc(radioEpisodes.weekStart))
+        .limit(1),
     ]);
 
   // Matchdagszonen. En tabellrad per lag — annars kan ett lag med en
@@ -154,6 +184,8 @@ export default async function Home() {
     };
   }).filter((p) => p.recent.length > 0);
 
+  const radio = radioRows[0] ? radioView(radioRows[0]) : null;
+
   return (
     <>
       <section className="bg-surface-dark text-on-dark">
@@ -172,7 +204,7 @@ export default async function Home() {
 
       <div className="mx-auto grid max-w-5xl gap-10 px-4 py-12 lg:grid-cols-[2fr_1fr]">
         <NewsFeed articles={news} />
-        <Sidebar leagues={allLeagues} podcasts={podcasts} />
+        <Sidebar radio={radio} leagues={allLeagues} podcasts={podcasts} />
       </div>
     </>
   );

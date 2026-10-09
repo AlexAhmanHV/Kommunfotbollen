@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SectionHeading } from "../section-heading";
+import { RadioPlayer, type RadioEpisodeView } from "./radio-player";
 
 export type PodEpisode = {
   id: string;
@@ -41,16 +42,24 @@ function Episode({ e }: { e: PodEpisode }) {
   );
 }
 
-// Sidospalten: länkar till serierna och de senaste poddavsnitten.
+// Sidospalten: Matchradion, länkar till serierna och de senaste poddavsnitten.
 export function Sidebar({
+  radio,
   leagues,
   podcasts,
 }: {
+  radio: RadioEpisodeView | null;
   leagues: { id: string; name: string }[];
   podcasts: PodcastGroup[];
 }) {
   return (
     <aside className="space-y-10">
+      {radio && (
+        <section className="reveal">
+          <SectionHeading>Matchradion</SectionHeading>
+          <RadioPlayer {...radio} />
+        </section>
+      )}
       <section className="reveal">
         <SectionHeading>Serier</SectionHeading>
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-raised">
