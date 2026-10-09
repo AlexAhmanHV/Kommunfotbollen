@@ -83,6 +83,7 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
   // Ett stabilt objekt med föränderliga fält, så att städningen nedan når
   // den AudioContext som skapas först vid klick.
   const audio = useRef<{ ctx: AudioContext | null; buffers: Buffers | null }>({ ctx: null, buffers: null });
+  const starting = useRef(false);
   const [state, setState] = useState<State>("idle");
   const [show, setShow] = useState<Show | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -126,26 +127,34 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
     }
     // idle eller error: (ladda och) spela programmet från början.
     // AudioContext skapas i klicket så att webbläsaren tillåter ljud.
-    const ctx = (holder.ctx ??= new AudioContext());
-    if (!holder.buffers) {
-      setState("loading");
-      try {
-        const [jingle, crowd, voice] = await Promise.all([
-          loadBuffer(ctx, JINGLE_URL),
-          loadBuffer(ctx, CROWD_URL),
-          loadBuffer(ctx, audioUrl),
-        ]);
-        holder.buffers = { jingle, crowd, voice };
-      } catch (err) {
-        console.error("[radio] kunde inte ladda ljudet:", err);
-        setState("error");
-        return;
+    // Vakten hindrar två snabba klick från att schemalägga två program.
+    if (starting.current) return;
+    starting.current = true;
+    try {
+      const ctx = (holder.ctx ??= new AudioContext());
+      void ctx.resume(); // i klicket — Safari kräver det innan första await
+      if (!holder.buffers) {
+        setState("loading");
+        try {
+          const [jingle, crowd, voice] = await Promise.all([
+            loadBuffer(ctx, JINGLE_URL),
+            loadBuffer(ctx, CROWD_URL),
+            loadBuffer(ctx, audioUrl),
+          ]);
+          holder.buffers = { jingle, crowd, voice };
+        } catch (err) {
+          console.error("[radio] kunde inte ladda ljudet:", err);
+          setState("error");
+          return;
+        }
       }
+      await ctx.resume();
+      setElapsed(0);
+      setShow(scheduleShow(ctx, holder.buffers));
+      setState("playing");
+    } finally {
+      starting.current = false;
     }
-    await ctx.resume();
-    setElapsed(0);
-    setShow(scheduleShow(ctx, holder.buffers));
-    setState("playing");
   }
 
   const playing = state === "playing";
