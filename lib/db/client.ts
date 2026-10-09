@@ -85,6 +85,16 @@ CREATE TABLE IF NOT EXISTS match_goals (
   source_url text,
   PRIMARY KEY (match_id, ord)
 );
+CREATE TABLE IF NOT EXISTS match_quotes (
+  match_id text NOT NULL REFERENCES matches(id),
+  ord integer NOT NULL,
+  speaker text NOT NULL,
+  role text,
+  team_id text REFERENCES teams(id),
+  quote text NOT NULL,
+  source_url text NOT NULL,
+  PRIMARY KEY (match_id, ord)
+);
 CREATE TABLE IF NOT EXISTS news_checked (
   url text PRIMARY KEY,
   checked_at timestamptz NOT NULL

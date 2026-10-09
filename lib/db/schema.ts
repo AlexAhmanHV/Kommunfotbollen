@@ -136,6 +136,24 @@ export const matchGoals = pgTable(
   (t) => [primaryKey({ columns: [t.matchId, t.ord] })],
 );
 
+// Citat från tränare/spelare ur samma matchrapporter som målskyttarna.
+// Sparas bara om citatet står ordagrant i artikeln (lib/quotes.ts).
+export const matchQuotes = pgTable(
+  "match_quotes",
+  {
+    matchId: text("match_id")
+      .notNull()
+      .references(() => matches.id),
+    ord: integer("ord").notNull(), // ordning i rapporten (0-baserad)
+    speaker: text("speaker").notNull(),
+    role: text("role"), // "tränare", "spelare" … null om okänt
+    teamId: text("team_id").references(() => teams.id), // null om laget inte gick att avgöra
+    quote: text("quote").notNull(),
+    sourceUrl: text("source_url").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.matchId, t.ord] })],
+);
+
 // Artikel-URL:er som nyhetssynken redan läst men inte sparat (handlade inte om
 // något bevakat lag) — så de inte hämtas om igen varje kväll.
 export const newsChecked = pgTable("news_checked", {

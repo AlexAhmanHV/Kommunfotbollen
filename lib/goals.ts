@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "./db/client";
-import { articles, articleTeams, matches, matchGoals, dvReports, teams } from "./db/schema";
+import { articles, articleTeams, matches, matchGoals, matchQuotes, dvReports, teams } from "./db/schema";
+import { verifiedQuotes } from "./quotes";
 import { LOCAL_TEAM_IDS, TEAM_NEWS_ALIASES } from "./local-teams";
 import {
   PAPERS,
@@ -48,12 +49,24 @@ const namedGoalsSchema = z
       .filter((g) => g.player !== "" && !UNKNOWN_PLAYER.test(g.player)),
   );
 
+const quotesSchema = z
+  .array(
+    z.object({
+      speaker: z.string(),
+      role: z.string().default(""),
+      team: z.string().default(""),
+      quote: z.string(),
+    }),
+  )
+  .default([]);
+
 const goalSchema = z.object({
   homeTeam: z.string(),
   awayTeam: z.string(),
   homeScore: z.number().int(),
   awayScore: z.number().int(),
   goals: namedGoalsSchema,
+  quotes: quotesSchema,
 });
 
 /** Första kompletta JSON-objektet i AI-svaret (modellen skriver ibland text efter). */
@@ -75,16 +88,17 @@ function parseFirstJsonObject(raw: string): unknown {
 }
 type Extracted = z.infer<typeof goalSchema>;
 
-const SYSTEM = `Du läser en svensk lokaltidnings matchreferat om fotboll och extraherar målskyttarna.
+const SYSTEM = `Du läser en svensk lokaltidnings matchreferat om fotboll och extraherar målskyttarna och citat.
 Svara med ENBART giltig JSON enligt:
-{"homeTeam":"","awayTeam":"","homeScore":0,"awayScore":0,"goals":[{"team":"<lagnamn exakt som i texten>","player":"<spelarens namn>"}]}
+{"homeTeam":"","awayTeam":"","homeScore":0,"awayScore":0,"goals":[{"team":"<lagnamn exakt som i texten>","player":"<spelarens namn>"}],"quotes":[{"speaker":"<talarens namn>","role":"<tränare|spelare|ledare>","team":"<lagnamn som i texten>","quote":"<citatet>"}]}
 Regler:
 - homeTeam/awayTeam = de två lagen (hemmalag först om det framgår, annars valfri ordning).
 - goals listas i den ordning målen gjordes. team = det lag vars spelare gjorde målet (använd lagnamnet som det skrivs i texten).
 - Ta bara med RIKTIGA mål i matchen. Uteslut straffläggning efter oavgjort, självmål-oklarheter räknas till det lag som fick målet.
 - Självmål: skriv player som "Självmål" (aldrig ett lagnamn).
 - Om ett mål saknar namngiven skytt, hoppa över det målet.
-- Om texten inte är ett matchreferat med resultat, svara {"homeTeam":"","awayTeam":"","homeScore":0,"awayScore":0,"goals":[]}.`;
+- quotes: direkta citat (inom citattecken eller efter pratminus) från namngivna tränare, ledare eller spelare — högst 2, de mest talande. Kopiera citatet EXAKT tecken för tecken ur texten; ändra, korta eller sätt aldrig ihop citat. Hoppa över citat där talaren inte namnges. Inga citat: "quotes":[].
+- Om texten inte är ett matchreferat med resultat, svara {"homeTeam":"","awayTeam":"","homeScore":0,"awayScore":0,"goals":[],"quotes":[]}.`;
 
 // AI:n skriver ibland ett lagnamn som "spelare" när texten bara säger att det
 // blev självmål. Spara sådana — och allt som redan heter självmål — enhetligt.
@@ -214,7 +228,7 @@ async function processReports(
     try {
       const res = await client.messages.create({
         model: MODEL,
-        max_tokens: 1024,
+        max_tokens: 1536,
         system: SYSTEM,
         messages: [{ role: "user", content: text }],
       });
@@ -233,7 +247,7 @@ async function processReports(
       continue;
     }
 
-    const matchId = await linkAndStore(db, data, url, teamName);
+    const matchId = await linkAndStore(db, data, url, teamName, text);
     await db
       .insert(dvReports)
       .values({ url, matchId, checkedAt: now })
@@ -248,6 +262,7 @@ async function linkAndStore(
   data: Extracted,
   url: string,
   teamName: Map<string, string>,
+  articleText: string,
 ): Promise<string | null> {
   if (data.goals.length === 0 && data.homeScore === 0 && data.awayScore === 0) {
     return null; // inte ett matchreferat
@@ -306,6 +321,9 @@ async function linkAndStore(
     return null;
   }
 
+  // citat sparas även när skyttarna redan fanns (t.ex. från en tidigare rapport)
+  await storeQuotes(db, match, data.quotes, articleText, url, teamName);
+
   // redan skyttar sparade för matchen? låt vara.
   const existing = await db
     .select({ n: sql<number>`count(*)` })
@@ -348,6 +366,49 @@ async function linkAndStore(
       .onConflictDoNothing();
   }
   return match.id;
+}
+
+// Sparar de citat som står ordagrant i rapporten. Finns citat för matchen
+// redan (från en annan rapport) läggs inga till.
+async function storeQuotes(
+  db: Db,
+  match: { id: string; homeTeamId: string; awayTeamId: string },
+  quotes: Extracted["quotes"],
+  articleText: string,
+  url: string,
+  teamName: Map<string, string>,
+): Promise<void> {
+  const ok = verifiedQuotes(quotes, articleText);
+  if (ok.length === 0) return;
+
+  const existing = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(matchQuotes)
+    .where(eq(matchQuotes.matchId, match.id));
+  if (Number(existing[0]?.n ?? 0) > 0) return;
+
+  const hn = teamName.get(match.homeTeamId) ?? "";
+  const an = teamName.get(match.awayTeamId) ?? "";
+  let ord = 0;
+  for (const q of ok) {
+    const teamId = teamNameMatches(hn, match.homeTeamId, q.team)
+      ? match.homeTeamId
+      : teamNameMatches(an, match.awayTeamId, q.team)
+        ? match.awayTeamId
+        : null;
+    await db
+      .insert(matchQuotes)
+      .values({
+        matchId: match.id,
+        ord: ord++,
+        speaker: q.speaker,
+        role: q.role.trim() || null,
+        teamId,
+        quote: q.quote,
+        sourceUrl: url,
+      })
+      .onConflictDoNothing();
+  }
 }
 
 // --- Bakåtfyllnad: skyttar ur redan hämtade nyhetsartiklar -----------------
