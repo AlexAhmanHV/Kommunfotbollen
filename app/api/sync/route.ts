@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
   }
 
   const target = req.nextUrl.searchParams.get("target");
+  // Radion kostar betalda anrop — kräv alltid hemligheten
+  if (target === "radio" && !expected) {
+    return NextResponse.json({ ok: false, error: "CRON_SECRET krävs för radio" }, { status: 403 });
+  }
   const started = Date.now();
   try {
     if (target === "teams") {
