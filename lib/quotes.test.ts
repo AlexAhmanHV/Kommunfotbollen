@@ -202,6 +202,29 @@ describe("verifiedQuotes, strängare gränser", () => {
     assert.ok(ok("Anna Berg", "Vi vann rättvist idag", "”Vi vann rättvist idag,” sa Anna Berg."));
     assert.ok(!ok("Anna Berg", "Vi vann rättvist idag", "”Vi vann rättvist idag, tycker jag”, sa Anna Berg."));
   });
+
+  it("räknar citattecken per stycke, så ett tum-tecken i en bildtext inte vänder citat", () => {
+    assert.ok(
+      !ok(
+        "Anna Berg",
+        "Det tyckte Anna Berg efter matchen",
+        'Bildtext: målet från 12" avstånd.\n”Vi var bäst.” Det tyckte Anna Berg efter matchen.',
+      ),
+    );
+    assert.ok(
+      ok(
+        "Anna Berg",
+        "Vi var bättre i andra halvlek",
+        'Bildtext: 12" avstånd.\n– Vi var bättre i andra halvlek, säger Anna Berg.',
+      ),
+    );
+  });
+
+  it("godkänner talverben i preteritum", () => {
+    assert.ok(
+      ok("Anna Berg", "Vi var bättre i andra halvlek", "– Vi var bättre i andra halvlek, berättade Anna Berg."),
+    );
+  });
 });
 
 describe("paperName", () => {

@@ -9,7 +9,7 @@ export const MIN_QUOTE_CHARS = 10;
 export const MAX_QUOTE_CHARS = 200;
 
 const SPEECH_VERBS =
-  "säger|sa|sade|berättar|menar|konstaterar|fortsätter|förklarar|tillägger|skrattar|suckar";
+  "säger|sa|sade|berättar|berättade|menar|menade|konstaterar|konstaterade|fortsätter|fortsatte|förklarar|förklarade|tillägger|tillade|tyckte|skrattar|suckar";
 
 /**
  * Jämförelseform: enhetliga citattecken, apostrofer och streck, ett blanksteg,
@@ -38,7 +38,10 @@ function startsLikeQuote(article: string, at: number): boolean {
   const before = article.slice(0, at).trimEnd();
   if (before === "") return false;
   const last = before[before.length - 1];
-  if (last === '"') return (before.match(/"/g) ?? []).length % 2 === 1;
+  if (last === '"') {
+    const paragraph = before.slice(before.lastIndexOf("\n") + 1);
+    return (paragraph.match(/"/g) ?? []).length % 2 === 1;
+  }
   return last === "-" && isSpeechDash(before, before.length - 1);
 }
 
