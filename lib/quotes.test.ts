@@ -138,6 +138,72 @@ describe("verifiedQuotes", () => {
   });
 });
 
+describe("verifiedQuotes, strängare gränser", () => {
+  const ok = (speaker: string, quote: string, article: string) =>
+    verifiedQuotes([{ speaker, quote }], article).length === 1;
+
+  it("godkänner citat som slutar på egna skiljetecken", () => {
+    assert.ok(ok("Anna Berg", "Det var fantastiskt!", "– Det var fantastiskt! säger Anna Berg."));
+    assert.ok(
+      ok("Anna Berg", "Vi vann rättvist idag.", "”Vi vann rättvist idag. Det var skönt”, säger Anna Berg."),
+    );
+    assert.ok(
+      ok("Anna Berg", "Vi får se vad som händer…", "– Vi får se vad som händer… säger Anna Berg."),
+    );
+  });
+
+  it("avvisar reporterns text efter ett slutcitattecken", () => {
+    assert.ok(
+      !ok("Anna Berg", "Det tyckte Anna Berg efter matchen", "”Vi var bäst.” Det tyckte Anna Berg efter matchen."),
+    );
+  });
+
+  it("avvisar tankstreck mitt i en mening", () => {
+    assert.ok(
+      !ok(
+        "Anna Berg",
+        "hemmalaget föll med 0–2 mot Kalmar",
+        "Det blev en tuff match – hemmalaget föll med 0–2 mot Kalmar. Anna Berg var besviken.",
+      ),
+    );
+  });
+
+  it("godkänner pratminus i början av ett stycke", () => {
+    assert.ok(
+      ok("Anna Berg", "Vi var bättre i andra halvlek", "Text här.\n– Vi var bättre i andra halvlek, säger Anna Berg."),
+    );
+  });
+
+  it("avvisar citat som kapats av artikelns slut", () => {
+    assert.ok(
+      !ok(
+        "Anna Berg",
+        "Vi spelade hela matchen utan att tappa",
+        "Matchen var jämn, säger Anna Berg. – Vi spelade hela matchen utan att tappa",
+      ),
+    );
+  });
+
+  it("matchar talarens efternamn som helt ord", () => {
+    const article = "– Vi var bättre än Kalmar, säger tränaren. Det var bekväma segrar.";
+    assert.ok(!ok("Erik Ek", "Vi var bättre än Kalmar", article));
+    assert.ok(!ok("Anna B.rg", "Vi var bättre än Kalmar", "– Vi var bättre än Kalmar, säger Anna Berg."));
+  });
+
+  it("avvisar ett citat som kapats vid ett kommatecken inne i meningen", () => {
+    const article = "– Vi var bäst på planen, eller nej, det var vi inte, säger Anna Berg.";
+    assert.ok(!ok("Anna Berg", "Vi var bäst på planen", article));
+    assert.ok(!ok("Anna Berg", "Vi var bäst på planen,", article));
+    assert.ok(ok("Anna Berg", "Vi var bäst på planen, eller nej, det var vi inte", article));
+    assert.ok(ok("Anna Berg", "Vi var bäst på planen, eller nej, det var vi inte,", article));
+  });
+
+  it("godkänner kommatecken före slutcitattecken", () => {
+    assert.ok(ok("Anna Berg", "Vi vann rättvist idag", "”Vi vann rättvist idag,” sa Anna Berg."));
+    assert.ok(!ok("Anna Berg", "Vi vann rättvist idag", "”Vi vann rättvist idag, tycker jag”, sa Anna Berg."));
+  });
+});
+
 describe("paperName", () => {
   it("känner igen de skrapade tidningarna", () => {
     assert.equal(paperName("https://www.dagensvastervik.se/sport/fotboll/e/1/x/"), "Dagens Västervik");
