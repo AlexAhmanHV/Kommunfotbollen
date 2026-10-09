@@ -16,7 +16,8 @@ const FADE_S = 1.5;
 
 export type RadioEpisodeView = { title: string; dateLabel: string; audioUrl: string; script: string };
 
-type Buffers = { jingle: AudioBuffer; crowd: AudioBuffer; voice: AudioBuffer };
+// Bara rösten är obligatorisk — saknas jingel eller publikbädd spelas programmet utan dem.
+type Buffers = { jingle: AudioBuffer | null; crowd: AudioBuffer | null; voice: AudioBuffer };
 type Show = { start: number; total: number };
 type State = "idle" | "loading" | "playing" | "paused" | "error";
 
@@ -29,9 +30,9 @@ async function loadBuffer(ctx: AudioContext, url: string): Promise<AudioBuffer> 
 /** Lägger ut hela programmet på ljudklockan och returnerar start och längd. */
 function scheduleShow(ctx: AudioContext, b: Buffers): Show {
   const t0 = ctx.currentTime + 0.05;
-  const voiceAt = t0 + b.jingle.duration;
+  const introLen = b.jingle?.duration ?? 0;
+  const voiceAt = t0 + introLen;
   const voiceEnd = voiceAt + b.voice.duration;
-  const outroAt = voiceEnd + FADE_S;
 
   const play = (buffer: AudioBuffer, at: number, dest: AudioNode = ctx.destination) => {
     const src = ctx.createBufferSource();
@@ -41,21 +42,25 @@ function scheduleShow(ctx: AudioContext, b: Buffers): Show {
     return src;
   };
 
-  play(b.jingle, t0);
+  if (b.jingle) play(b.jingle, t0);
   play(b.voice, voiceAt);
 
-  const crowdGain = ctx.createGain();
-  crowdGain.connect(ctx.destination);
-  crowdGain.gain.setValueAtTime(0, voiceAt);
-  crowdGain.gain.linearRampToValueAtTime(CROWD_VOLUME, voiceAt + FADE_S);
-  crowdGain.gain.setValueAtTime(CROWD_VOLUME, voiceEnd);
-  crowdGain.gain.linearRampToValueAtTime(0, voiceEnd + FADE_S);
-  const crowd = play(b.crowd, voiceAt, crowdGain);
-  crowd.loop = true;
-  crowd.stop(voiceEnd + FADE_S);
+  if (b.crowd) {
+    const crowdGain = ctx.createGain();
+    crowdGain.connect(ctx.destination);
+    crowdGain.gain.setValueAtTime(0, voiceAt);
+    crowdGain.gain.linearRampToValueAtTime(CROWD_VOLUME, voiceAt + FADE_S);
+    crowdGain.gain.setValueAtTime(CROWD_VOLUME, voiceEnd);
+    crowdGain.gain.linearRampToValueAtTime(0, voiceEnd + FADE_S);
+    const crowd = play(b.crowd, voiceAt, crowdGain);
+    crowd.loop = true;
+    crowd.stop(voiceEnd + FADE_S);
+  }
 
-  play(b.jingle, outroAt);
-  return { start: t0, total: outroAt + b.jingle.duration - t0 };
+  // Utan publikbädd finns ingen utfasning att vänta in
+  const outroAt = voiceEnd + (b.crowd ? FADE_S : 0);
+  if (b.jingle) play(b.jingle, outroAt);
+  return { start: t0, total: outroAt + (b.jingle?.duration ?? 0) - t0 };
 }
 
 function fmt(sec: number): string {
@@ -136,12 +141,20 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
       if (!holder.buffers) {
         setState("loading");
         try {
-          const [jingle, crowd, voice] = await Promise.all([
+          const [jingle, crowd, voice] = await Promise.allSettled([
             loadBuffer(ctx, JINGLE_URL),
             loadBuffer(ctx, CROWD_URL),
             loadBuffer(ctx, audioUrl),
           ]);
-          holder.buffers = { jingle, crowd, voice };
+          if (voice.status === "rejected") throw voice.reason;
+          for (const r of [jingle, crowd]) {
+            if (r.status === "rejected") console.warn("[radio] ljudfil saknas, spelar utan:", r.reason);
+          }
+          holder.buffers = {
+            jingle: jingle.status === "fulfilled" ? jingle.value : null,
+            crowd: crowd.status === "fulfilled" ? crowd.value : null,
+            voice: voice.value,
+          };
         } catch (err) {
           console.error("[radio] kunde inte ladda ljudet:", err);
           setState("error");
