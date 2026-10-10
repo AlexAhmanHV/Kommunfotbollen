@@ -58,6 +58,12 @@ export function Sidebar({
         <section className="reveal">
           <SectionHeading>Matchradion</SectionHeading>
           <RadioPlayer {...radio} />
+          <Link
+            href="/radio"
+            className="mt-2 inline-block text-xs font-semibold text-ink-muted hover:text-ink hover:underline"
+          >
+            Alla avsnitt →
+          </Link>
         </section>
       )}
       <section className="reveal">

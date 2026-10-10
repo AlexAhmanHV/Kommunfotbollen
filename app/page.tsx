@@ -23,9 +23,9 @@ import {
 } from "@/lib/matchday";
 import { MAX_ARTICLE_AGE_DAYS } from "@/lib/news";
 import { getMatches } from "@/lib/queries";
+import { radioView } from "@/lib/radio/view";
 import { MatchdayHero } from "./components/home/matchday-hero";
 import { NewsFeed, type NewsArticle } from "./components/home/news-feed";
-import type { RadioEpisodeView } from "./components/home/radio-player";
 import { RoundStrip } from "./components/home/round-strip";
 import { Sidebar, type PodcastGroup } from "./components/home/sidebar";
 import { TeamGrid } from "./components/home/team-grid";
@@ -51,24 +51,6 @@ function matchdayNow(): Date {
 
 function newsCutoff(): Date {
   return new Date(Date.now() - MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000);
-}
-
-const radioDateFmt = new Intl.DateTimeFormat("sv-SE", {
-  day: "numeric",
-  month: "short",
-  timeZone: "Europe/Stockholm",
-});
-
-/** "Vecka 41" + "5 okt. – 11 okt." för senaste avsnittet. */
-function radioView(row: { id: string; weekStart: Date; script: string; audioUrl: string }): RadioEpisodeView {
-  // +6,5 dygn landar säkert på söndagen även veckan sommartiden slutar
-  const sunday = new Date(row.weekStart.getTime() + 6.5 * 24 * 60 * 60 * 1000);
-  return {
-    title: `Vecka ${Number(row.id.slice(6))}`,
-    dateLabel: `${radioDateFmt.format(row.weekStart)} – ${radioDateFmt.format(sunday)}`,
-    audioUrl: row.audioUrl,
-    script: row.script,
-  };
 }
 
 export default async function Home() {

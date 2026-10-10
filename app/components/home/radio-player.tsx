@@ -76,6 +76,13 @@ function PlayIcon() {
   );
 }
 
+const PLAY_EVENT = "matchradion:play";
+
+/** Säger till övriga spelare på sidan att pausa. */
+function announcePlay(audioUrl: string) {
+  window.dispatchEvent(new CustomEvent(PLAY_EVENT, { detail: audioUrl }));
+}
+
 function PauseIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
@@ -99,6 +106,19 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
       void holder.ctx?.close();
     };
   }, []);
+
+  // Bara en spelare åt gången: startar en annan pausas den här.
+  useEffect(() => {
+    const onOtherPlay = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === audioUrl) return;
+      const ctx = audio.current.ctx;
+      if (ctx?.state !== "running") return;
+      void ctx.suspend();
+      setState((s) => (s === "playing" ? "paused" : s));
+    };
+    window.addEventListener(PLAY_EVENT, onOtherPlay);
+    return () => window.removeEventListener(PLAY_EVENT, onOtherPlay);
+  }, [audioUrl]);
 
   // Förloppet följer ljudklockan (står still när den är pausad).
   useEffect(() => {
@@ -126,6 +146,7 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
       return;
     }
     if (state === "paused" && holder.ctx) {
+      announcePlay(audioUrl);
       await holder.ctx.resume();
       setState("playing");
       return;
@@ -138,6 +159,7 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
     try {
       const ctx = (holder.ctx ??= new AudioContext());
       void ctx.resume(); // i klicket — Safari kräver det innan första await
+      announcePlay(audioUrl);
       if (!holder.buffers) {
         setState("loading");
         try {
