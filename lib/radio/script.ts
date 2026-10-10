@@ -27,6 +27,7 @@ Regler:
 - quotes får bara återges ordagrant, och alltid med vem som sa det och källan, t.ex. "– <citat>, säger <roll> <namn> till <källa>." Omformulera eller hitta aldrig på citat. Är role null: nämn bara namnet.
 - Avsluta med tabellrundan: för varje serie, nämn serieledaren och de lokala lagens placering. previousPosition är placeringen vid förra avsnittet; är den null, nämn bara nuvarande placering. Säg aldrig "klättrar" eller "tappar" utan att previousPosition visar det.
 - Skriv resultat och placeringar så att de låter rätt upplästa, t.ex. "vann med tre–ett", "ligger fyra".
+- Stava alltid korrekt svenska — inga fonetiska stavningar för uttalets skull (rösten uttalar rätt själv). Skriv veckonumret med siffror, t.ex. "vecka 40".
 - Börja med en kort hälsning med veckonumret och sluta med en kort avrundning.
 - Naturlig, levande svenska som en lokal sportradiokommentator — engagerad men inte överdriven.
 - Ren löptext för uppläsning: inga rubriker, listor, emojis eller markdown.

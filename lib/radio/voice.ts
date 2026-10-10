@@ -3,6 +3,9 @@
 
 const TTS_MODEL = "eleven_multilingual_v2";
 const BUCKET = "radio";
+// Ett anrop som hänger får inte låsa kvällsjobbet.
+const TTS_TIMEOUT_MS = 120_000;
+const STORAGE_TIMEOUT_MS = 30_000;
 
 /** Manus → MP3 med vald röst. */
 export async function synthesize(text: string, apiKey: string, voiceId: string): Promise<ArrayBuffer> {
@@ -12,6 +15,7 @@ export async function synthesize(text: string, apiKey: string, voiceId: string):
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ text, model_id: TTS_MODEL }),
+      signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
     },
   );
   if (!res.ok) throw new Error(`ElevenLabs TTS ${res.status}: ${await res.text()}`);
@@ -23,6 +27,7 @@ export async function storageReachable(supabaseUrl: string, serviceKey: string):
   try {
     const res = await fetch(`${supabaseUrl.replace(/\/+$/, "")}/storage/v1/bucket/${BUCKET}`, {
       headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+      signal: AbortSignal.timeout(STORAGE_TIMEOUT_MS),
     });
     return res.ok ? true : res.status;
   } catch {
@@ -48,6 +53,7 @@ export async function uploadAudio(
       "x-upsert": "true",
     },
     body: audio,
+    signal: AbortSignal.timeout(STORAGE_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Supabase Storage ${res.status}: ${await res.text()}`);
   // ?v= eftersom ett omgjort avsnitt återanvänder filnamnet (annars serveras gammalt ljud ur cache)
