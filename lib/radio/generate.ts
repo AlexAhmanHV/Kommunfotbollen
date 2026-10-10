@@ -1,4 +1,4 @@
-import { desc, eq, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, or } from "drizzle-orm";
 import { getDb } from "../db/client";
 import {
   groups,
@@ -26,6 +26,10 @@ import { lastCompletedWeek } from "./week";
 //  - saknad nyckel → logga och hoppa över, sajten visar bara inget nytt avsnitt
 //  - ordning manus → ljud → uppladdning → SIST raden: ett fel i något steg
 //    lämnar inget halvfärdigt avsnitt, nästa körning gör om alltihop.
+
+// Äldre än så räknas förra avsnittet inte som "förra veckan" (t.ex. över
+// vinteruppehållet) och tabellförändringar nämns inte.
+const PREVIOUS_MAX_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 
 // Betalda försök per veckonyckel i denna process — ett ihållande fel (t.ex. fel
 // röst eller trasig lagring) ska inte bränna krediter varje natt. Nollställs vid omstart.
@@ -88,7 +92,14 @@ export async function generateEpisode(now: Date = new Date()): Promise<void> {
     db
       .select({ standings: radioEpisodes.standings })
       .from(radioEpisodes)
-      .where(lt(radioEpisodes.weekStart, week.start))
+      // Bara ett färskt avsnitt duger att jämföra tabellen mot — annars skulle
+      // vårens första avsnitt jämföra med förra säsongens slutplaceringar.
+      .where(
+        and(
+          lt(radioEpisodes.weekStart, week.start),
+          gte(radioEpisodes.weekStart, new Date(week.start.getTime() - PREVIOUS_MAX_AGE_MS)),
+        ),
+      )
       .orderBy(desc(radioEpisodes.weekStart))
       .limit(1),
   ]);
