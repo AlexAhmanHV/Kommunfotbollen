@@ -8,6 +8,9 @@ const BUCKET = "radio";
 // Ett anrop som hänger får inte låsa kvällsjobbet.
 const TTS_TIMEOUT_MS = 120_000;
 const STORAGE_TIMEOUT_MS = 30_000;
+// Ett nytt försök per replik vid tillfälliga fel, efter en kort paus.
+const TTS_ATTEMPTS = 2;
+const TTS_RETRY_DELAY_MS = 2_000;
 
 type TtsBody = { text: string; model_id: string; previous_text?: string; next_text?: string };
 
@@ -59,6 +62,37 @@ export function stripMp3Headers(bytes: Uint8Array): Uint8Array {
   return start === 0 ? bytes : bytes.subarray(Math.min(start, bytes.length));
 }
 
+/** En replik → MP3. Ett tillfälligt fel (429, 5xx, nätverk/tidsgräns) får ett
+ * nytt försök efter en kort paus, så att en hicka inte kastar alla betalda
+ * repliker. Övriga 4xx kastar direkt. */
+async function synthesizeLine(voiceId: string, body: TtsBody, apiKey: string): Promise<Uint8Array> {
+  for (let attempt = 1; ; attempt++) {
+    const retry = attempt < TTS_ATTEMPTS;
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+        {
+          method: "POST",
+          headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
+        },
+      );
+    } catch (err) {
+      if (!retry) throw err;
+      await new Promise((r) => setTimeout(r, TTS_RETRY_DELAY_MS));
+      continue;
+    }
+    if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    if (retry && (res.status === 429 || res.status >= 500)) {
+      await new Promise((r) => setTimeout(r, TTS_RETRY_DELAY_MS));
+      continue;
+    }
+    throw new Error(`ElevenLabs TTS ${res.status}: ${await res.text()}`);
+  }
+}
+
 /** Dialog → en MP3: replik för replik i ordning, svaren ihopsatta. Ett fel i
  * någon replik kastar — ett avsnitt med halva dialogen får aldrig sändas. */
 export async function synthesizeDialogue(
@@ -68,17 +102,7 @@ export async function synthesizeDialogue(
 ): Promise<ArrayBuffer> {
   const parts: Uint8Array[] = [];
   for (const { voiceId, body } of ttsRequests(lines, voices)) {
-    const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
-      },
-    );
-    if (!res.ok) throw new Error(`ElevenLabs TTS ${res.status}: ${await res.text()}`);
-    parts.push(stripMp3Headers(new Uint8Array(await res.arrayBuffer())));
+    parts.push(stripMp3Headers(await synthesizeLine(voiceId, body, apiKey)));
   }
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let offset = 0;

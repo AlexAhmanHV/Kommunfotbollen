@@ -111,6 +111,40 @@ describe("synthesizeDialogue", () => {
     }
   });
 
+  it("försöker en gång till vid 429/5xx och nätverksfel", async () => {
+    const stub = stubFetch([
+      () => new Response("busy", { status: 429 }),
+      () => new Response(new Uint8Array([1])),
+      () => {
+        throw new TypeError("fetch failed");
+      },
+      () => new Response(new Uint8Array([2])),
+      () => new Response(new Uint8Array([3])),
+    ]);
+    try {
+      const out = await synthesizeDialogue(LINES, "key", VOICES);
+      assert.deepEqual([...new Uint8Array(out)], [1, 2, 3]);
+      assert.equal(stub.calls, 5);
+    } finally {
+      stub.restore();
+    }
+  });
+
+  it("ger upp efter andra misslyckandet", async () => {
+    const stub = stubFetch([
+      () => new Response("down", { status: 503 }),
+      () => new Response("down", { status: 503 }),
+      () => new Response(new Uint8Array([3])),
+    ]);
+    try {
+      await assert.rejects(synthesizeDialogue(LINES, "key", VOICES), /503/);
+      assert.equal(stub.calls, 2);
+    } finally {
+      stub.restore();
+    }
+  });
+
+  // 400 är inte tillfälligt — inget nytt försök
   it("kastar vid fel och hämtar inga fler repliker", async () => {
     const stub = stubFetch([
       () => new Response(new Uint8Array([1])),
