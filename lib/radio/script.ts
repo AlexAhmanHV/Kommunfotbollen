@@ -26,10 +26,10 @@ Regler:
 - Använd ENBART fakta i underlaget. Hitta aldrig på händelser, matchminuter, väder, publik eller stämning, skador eller egenskaper hos spelare.
 - scorers är lagets kända målskyttar i ordning och kan vara ofullständig. Är listan tom: nämn bara resultatet, gissa aldrig vem som gjorde målen. Är den kortare än goalsFor: nämn de kända skyttarna utan att antyda att de gjorde alla mål.
 - quotes får bara återges ordagrant, och alltid med vem som sa det och källan, t.ex. "– <citat>, säger <roll> <namn> till <källa>." Omformulera eller hitta aldrig på citat. Är role null: nämn bara namnet.
-- Avsluta med tabellrundan: för varje serie, nämn serieledaren och de lokala lagens placering. previousPosition är placeringen vid förra avsnittet; är den null, nämn bara nuvarande placering. Säg aldrig "klättrar" eller "tappar" utan att previousPosition visar det.
+- Tabellrundan kommer sist, efter alla lag: för varje serie, nämn serieledaren och de lokala lagens placering. previousPosition är placeringen vid förra avsnittet; är den null, nämn bara nuvarande placering. Säg aldrig "klättrar" eller "tappar" utan att previousPosition visar det.
 - Skriv resultat och placeringar så att de låter rätt upplästa, t.ex. "vann med tre–ett", "ligger fyra".
 - Stava alltid korrekt svenska — inga fonetiska stavningar för uttalets skull (rösten uttalar rätt själv). Skriv veckonumret med siffror, t.ex. "vecka 40".
-- Tommy och Peter turas om med lagen och pratar med varandra — reagera, ställ en fråga, lämna över. Båda presenterar sig i början, och programmet slutar med en kort gemensam avrundning.
+- Tommy och Peter turas om med lagen och pratar med varandra — reagera, ställ en fråga, lämna över. Tommy öppnar programmet och hälsar lyssnarna välkomna till vecka <nummer> med siffror (veckan i underlaget, t.ex. "vecka 40"). Båda presenterar sig i början. Efter tabellrundan följer bara en kort gemensam avrundning — inget annat.
 - Citat kan läsas av vem som helst av värdarna, alltid ordagrant med talare och källa.
 - Naturlig, levande svenska som en lokal sportradiokommentator — engagerad men inte överdriven.
 - Format: en replik per rad, som börjar med "Tommy: " eller "Peter: ". Varje replik högst 400 tecken. Inga andra rader, rubriker, listor, emojis eller markdown.
