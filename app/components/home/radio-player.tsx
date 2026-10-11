@@ -95,6 +95,8 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
   // den AudioContext som skapas först vid klick.
   const audio = useRef<{ ctx: AudioContext | null; buffers: Buffers | null }>({ ctx: null, buffers: null });
   const starting = useRef(false);
+  // Sätts när en annan spelare startar medan den här laddar/startar.
+  const cancelled = useRef(false);
   const [state, setState] = useState<State>("idle");
   const [show, setShow] = useState<Show | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -110,6 +112,8 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
   useEffect(() => {
     const onOtherPlay = (e: Event) => {
       if ((e as CustomEvent<string>).detail === audioUrl) return;
+      // Laddar den här fortfarande får den inte börja spela när laddningen är klar
+      if (starting.current) cancelled.current = true;
       const ctx = audio.current.ctx;
       if (ctx?.state !== "running") return;
       void ctx.suspend();
@@ -155,6 +159,7 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
     // Vakten hindrar två snabba klick från att schemalägga två program.
     if (starting.current) return;
     starting.current = true;
+    cancelled.current = false;
     try {
       const ctx = (holder.ctx ??= new AudioContext());
       void ctx.resume(); // i klicket — Safari kräver det innan första await
@@ -181,6 +186,13 @@ export function RadioPlayer({ title, dateLabel, audioUrl, script }: RadioEpisode
           setState("error");
           return;
         }
+      }
+      if (cancelled.current) {
+        // En annan spelare startade under laddningen: klockan står still,
+        // buffrarna sparas till nästa klick.
+        void ctx.suspend();
+        setState("idle");
+        return;
       }
       await ctx.resume();
       setElapsed(0);
