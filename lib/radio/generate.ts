@@ -14,8 +14,9 @@ import { FEATURED_PRIORITY, LOCAL_TEAM_IDS } from "../local-teams";
 import { latestRowPerTeam } from "../matchday";
 import { getMatches } from "../queries";
 import { buildEpisodeData, standingsSnapshot } from "./episode-data";
+import { parseDialogue } from "./dialogue";
 import { writeScript } from "./script";
-import { storageReachable, synthesize, uploadAudio } from "./voice";
+import { storageReachable, synthesizeDialogue, uploadAudio } from "./voice";
 import { lastCompletedWeek } from "./week";
 
 // Matchradion: ett avsnitt för senast avslutade vecka. Körs dagligen men gör
@@ -40,18 +41,20 @@ export async function generateEpisode(now: Date = new Date()): Promise<void> {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const elevenKey = process.env.ELEVENLABS_API_KEY;
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const voiceId2 = process.env.ELEVENLABS_VOICE_ID_2;
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, "");
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const missing = [
     ["ANTHROPIC_API_KEY", anthropicKey],
     ["ELEVENLABS_API_KEY", elevenKey],
     ["ELEVENLABS_VOICE_ID", voiceId],
+    ["ELEVENLABS_VOICE_ID_2", voiceId2],
     ["SUPABASE_URL", supabaseUrl],
     ["SUPABASE_SERVICE_ROLE_KEY", serviceKey],
   ]
     .filter(([, v]) => !v)
     .map(([name]) => name);
-  if (!anthropicKey || !elevenKey || !voiceId || !supabaseUrl || !serviceKey) {
+  if (!anthropicKey || !elevenKey || !voiceId || !voiceId2 || !supabaseUrl || !serviceKey) {
     console.log(`[radio] hoppar över: nycklar saknas (${missing.join(", ")})`);
     return;
   }
@@ -158,7 +161,10 @@ export async function generateEpisode(now: Date = new Date()): Promise<void> {
 
   paidAttempts.set(week.key, (paidAttempts.get(week.key) ?? 0) + 1);
   const script = await writeScript(data, anthropicKey);
-  const audio = await synthesize(script, elevenKey, voiceId);
+  const audio = await synthesizeDialogue(parseDialogue(script), elevenKey, {
+    Tommy: voiceId,
+    Peter: voiceId2,
+  });
   const audioUrl = await uploadAudio(week.key, audio, supabaseUrl, serviceKey);
   await db
     .insert(radioEpisodes)

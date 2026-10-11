@@ -74,9 +74,9 @@ Sätt `ANTHROPIC_API_KEY` i en `.env.local`-fil för att aktivera AI-relevansbed
 
 ## Matchradion
 
-Ett veckovis AI-genererat radioprogram om lokalfotbollen. Jobbet körs dagligen kl 23:30 men skapar bara ett avsnitt när veckans saknas: Claude skriver manuset utifrån veckans matcher, tabeller och verifierade citat, ElevenLabs läser upp det och ljudet läggs i Supabase Storage. Spelaren på startsidan mixar jingel och publikljud i webbläsaren.
+Ett veckovis AI-genererat radioprogram om lokalfotbollen. Jobbet körs dagligen kl 23:30 men skapar bara ett avsnitt när veckans saknas: Claude skriver manuset utifrån veckans matcher, tabeller och verifierade citat, två ElevenLabs-röster (Tommy och Peter) läser upp dialogen och ljudet läggs i Supabase Storage. Spelaren på startsidan mixar jingel och publikljud i webbläsaren.
 
-- Sätt `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `SUPABASE_URL` och `SUPABASE_SERVICE_ROLE_KEY` (plus `ANTHROPIC_API_KEY`) — saknas någon hoppas jobbet över.
+- Sätt `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` (Tommy), `ELEVENLABS_VOICE_ID_2` (Peter), `SUPABASE_URL` och `SUPABASE_SERVICE_ROLE_KEY` (plus `ANTHROPIC_API_KEY`) — saknas någon hoppas jobbet över.
 - Skapa en publik Storage-bucket med namnet `radio`.
 - `npm run radio:sounds` genererar jingel och publikljud till `public/radio/`.
 - `POST /api/sync?target=radio` kör jobbet manuellt; kräver att `CRON_SECRET` är satt.

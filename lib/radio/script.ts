@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import { parseDialogue } from "./dialogue";
 import type { EpisodeData } from "./episode-data";
 
 // Manus till Matchradion. Ett anrop i veckan, så Sonnet (språket är
@@ -15,7 +16,7 @@ export const scriptSchema = z
   .min(200, "manuset är för kort")
   .max(MAX_SCRIPT_CHARS, "manuset är för långt");
 
-const SYSTEM = `Du skriver manus till "Matchradion", ett kort veckoprogram om lokal amatörfotboll i Västervik med omnejd. Manuset läses upp av en AI-röst med publikljud i bakgrunden.
+const SYSTEM = `Du skriver manus till "Matchradion", ett kort veckoprogram om lokal amatörfotboll i Västervik med omnejd. Programmet leds av två jämlika värdar, Tommy och Peter, som läses upp av AI-röster med publikljud i bakgrunden.
 
 Underlaget är JSON:
 - teams: varje lokalt lag som spelat i veckan, med results (motståndare, hemma/borta, mål, utfall, scorers, quotes) och next (nästa match).
@@ -28,9 +29,10 @@ Regler:
 - Avsluta med tabellrundan: för varje serie, nämn serieledaren och de lokala lagens placering. previousPosition är placeringen vid förra avsnittet; är den null, nämn bara nuvarande placering. Säg aldrig "klättrar" eller "tappar" utan att previousPosition visar det.
 - Skriv resultat och placeringar så att de låter rätt upplästa, t.ex. "vann med tre–ett", "ligger fyra".
 - Stava alltid korrekt svenska — inga fonetiska stavningar för uttalets skull (rösten uttalar rätt själv). Skriv veckonumret med siffror, t.ex. "vecka 40".
-- Börja med en kort hälsning med veckonumret och sluta med en kort avrundning.
+- Tommy och Peter turas om med lagen och pratar med varandra — reagera, ställ en fråga, lämna över. Båda presenterar sig i början, och programmet slutar med en kort gemensam avrundning.
+- Citat kan läsas av vem som helst av värdarna, alltid ordagrant med talare och källa.
 - Naturlig, levande svenska som en lokal sportradiokommentator — engagerad men inte överdriven.
-- Ren löptext för uppläsning: inga rubriker, listor, emojis eller markdown.
+- Format: en replik per rad, som börjar med "Tommy: " eller "Peter: ". Varje replik högst 250 tecken. Inga andra rader, rubriker, listor, emojis eller markdown.
 - Längd: 350–450 ord.
 - Svara med ENBART manuset.`;
 
@@ -58,5 +60,7 @@ export async function writeScript(data: EpisodeData, apiKey: string): Promise<st
     .filter((b) => b.type === "text")
     .map((b) => (b as { text: string }).text)
     .join("");
-  return scriptSchema.parse(text);
+  const script = scriptSchema.parse(text);
+  parseDialogue(script); // kastar om dialogen inte går att läsa upp
+  return script;
 }
