@@ -1,7 +1,7 @@
-import type { RadioEpisodeView } from "@/app/components/home/radio-player";
-
 // Ett sparat avsnitt → det spelaren visar ("Vecka 40", "28 sep. – 4 okt.").
 // Delas av startsidan och arkivsidan /radio.
+
+export type RadioEpisodeView = { title: string; dateLabel: string; audioUrl: string; script: string };
 
 const dateFmt = new Intl.DateTimeFormat("sv-SE", {
   day: "numeric",

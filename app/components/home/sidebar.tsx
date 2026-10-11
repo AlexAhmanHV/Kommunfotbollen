@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SectionHeading } from "../section-heading";
-import { RadioPlayer, type RadioEpisodeView } from "./radio-player";
+import type { RadioEpisodeView } from "@/lib/radio/view";
+import { RadioPlayer } from "./radio-player";
 
 export type PodEpisode = {
   id: string;

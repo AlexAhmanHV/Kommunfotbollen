@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { RadioEpisodeView } from "@/lib/radio/view";
 
 // Matchradions spelare. Hela programmet mixas i webbläsaren med Web Audio och
 // schemaläggs på ljudklockan vid klicket:
@@ -13,8 +14,6 @@ const JINGLE_URL = "/radio/jingle.mp3";
 const CROWD_URL = "/radio/crowd.mp3";
 const CROWD_VOLUME = 0.18;
 const FADE_S = 1.5;
-
-export type RadioEpisodeView = { title: string; dateLabel: string; audioUrl: string; script: string };
 
 // Bara rösten är obligatorisk — saknas jingel eller publikbädd spelas programmet utan dem.
 type Buffers = { jingle: AudioBuffer | null; crowd: AudioBuffer | null; voice: AudioBuffer };
