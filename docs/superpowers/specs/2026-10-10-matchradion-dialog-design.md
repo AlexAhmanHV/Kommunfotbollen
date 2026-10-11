@@ -29,7 +29,7 @@ Promptändringar i `lib/radio/script.ts` (alla befintliga faktaregler kvar):
 - båda presenterar sig i början;
 - citat kan läsas av vem som helst, alltid ordagrant med talare och källa;
 - varje replik är en rad som börjar med `Tommy:` eller `Peter:`, högst
-  250 tecken, inga andra rader;
+  400 tecken, inga andra rader;
 - längd som i dag (350–450 ord).
 
 **`parseDialogue(text)`** (ren funktion, ny fil `lib/radio/dialogue.ts`):
@@ -37,7 +37,7 @@ Promptändringar i `lib/radio/script.ts` (alla befintliga faktaregler kvar):
 - returnerar `{ speaker: "Tommy" | "Peter"; text: string }[]`;
 - tomma rader ignoreras; blanksteg runt talare och text trimmas;
 - kastar fel om: en rad saknar känd talare, en replik är tom eller över
-  250 tecken, eller bara en av värdarna förekommer.
+  400 tecken, eller bara en av värdarna förekommer.
 
 `writeScript` validerar som i dag (200–4 000 tecken totalt) och dessutom med
 `parseDialogue`; ogiltig dialog → fel → inget avsnitt, nästa körning försöker

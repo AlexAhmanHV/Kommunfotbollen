@@ -32,7 +32,7 @@ Regler:
 - Tommy och Peter turas om med lagen och pratar med varandra — reagera, ställ en fråga, lämna över. Båda presenterar sig i början, och programmet slutar med en kort gemensam avrundning.
 - Citat kan läsas av vem som helst av värdarna, alltid ordagrant med talare och källa.
 - Naturlig, levande svenska som en lokal sportradiokommentator — engagerad men inte överdriven.
-- Format: en replik per rad, som börjar med "Tommy: " eller "Peter: ". Varje replik högst 250 tecken. Inga andra rader, rubriker, listor, emojis eller markdown.
+- Format: en replik per rad, som börjar med "Tommy: " eller "Peter: ". Varje replik högst 400 tecken. Inga andra rader, rubriker, listor, emojis eller markdown.
 - Längd: 350–450 ord.
 - Svara med ENBART manuset.`;
 

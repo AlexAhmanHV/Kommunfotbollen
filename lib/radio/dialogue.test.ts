@@ -35,13 +35,32 @@ describe("parseDialogue", () => {
     assert.throws(() => parseDialogue("Tommy: Hej.\nAnna: Hej."), /talare/);
   });
 
+  it("avvisar en rad med två talare", () => {
+    assert.throws(() => parseDialogue("Tommy: Hej. Peter: Tack!\nPeter: Ja."), /talare/);
+    assert.throws(() => parseDialogue("Tommy: Hej.\nPeter: Ja, tommy : precis."), /talare/);
+  });
+
+  it("avvisar prototypnycklar som talare", () => {
+    assert.throws(() => parseDialogue("Tommy: Hej.\nPeter: Hej.\nconstructor: x"), /talare/);
+    assert.throws(() => parseDialogue("Tommy: Hej.\nPeter: Hej.\n__proto__: x"), /talare/);
+  });
+
+  it("tål markdown-betoning runt talaren", () => {
+    const lines = parseDialogue("**Tommy:** Hej.\n*Peter*: Hej hej.\n__Tommy__: Nu kör vi.");
+    assert.deepEqual(lines, [
+      { speaker: "Tommy", text: "Hej." },
+      { speaker: "Peter", text: "Hej hej." },
+      { speaker: "Tommy", text: "Nu kör vi." },
+    ]);
+  });
+
   it("avvisar en tom replik", () => {
     assert.throws(() => parseDialogue("Tommy: Hej.\nPeter:   "), /tom/);
   });
 
-  it("godkänner 250 tecken men inte 251", () => {
+  it("godkänner 400 tecken men inte 401", () => {
     const ok = "a".repeat(MAX_LINE_CHARS);
-    assert.equal(parseDialogue(`Tommy: ${ok}\nPeter: Ja.`)[0].text.length, 250);
+    assert.equal(parseDialogue(`Tommy: ${ok}\nPeter: Ja.`)[0].text.length, 400);
     assert.throws(() => parseDialogue(`Tommy: ${ok}a\nPeter: Ja.`), /lång/);
   });
 
