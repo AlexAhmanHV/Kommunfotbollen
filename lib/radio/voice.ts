@@ -25,6 +25,40 @@ export function ttsRequests(
   });
 }
 
+// MPEG-1 Layer III: bithastighet (kbit/s) per index och samplingsfrekvens per index
+const MP3_BITRATES = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
+const MP3_SAMPLE_RATES = [44100, 48000, 32000];
+
+const tagAt = (b: Uint8Array, at: number) => String.fromCharCode(...b.subarray(at, at + 4));
+
+/** Skalar bort en inledande ID3v2-tagg och en Xing/Info/VBRI-ram från ett
+ * MP3-klipp. Sätts flera klipp ihop med kvar sådana mitt i strömmen kan
+ * avkodare (Safari) lita på första Info-ramens ramantal och sluta efter
+ * första repliken. Annat lämnas orört. */
+export function stripMp3Headers(bytes: Uint8Array): Uint8Array {
+  let start = 0;
+  if (bytes.length >= 10 && tagAt(bytes, 0).startsWith("ID3")) {
+    // Storleken är fyra "syncsafe" byte (7 bitar var); flagga 0x10 = sidfot på 10 byte
+    const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14) | ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
+    start = 10 + size + (bytes[5] & 0x10 ? 10 : 0);
+  }
+  const h = start;
+  const isMpeg1Layer3 =
+    bytes.length >= h + 4 && bytes[h] === 0xff && (bytes[h + 1] & 0xe0) === 0xe0 && ((bytes[h + 1] >> 1) & 0xf) === 0xd;
+  if (isMpeg1Layer3) {
+    const bitrate = MP3_BITRATES[bytes[h + 2] >> 4];
+    const sampleRate = MP3_SAMPLE_RATES[(bytes[h + 2] >> 2) & 3];
+    const padding = (bytes[h + 2] >> 1) & 1;
+    const mono = bytes[h + 3] >> 6 === 3;
+    const xing = tagAt(bytes, h + (mono ? 21 : 36));
+    const isInfoFrame = xing === "Xing" || xing === "Info" || tagAt(bytes, h + 36) === "VBRI";
+    if (bitrate && sampleRate && isInfoFrame) {
+      start = h + Math.floor((144 * bitrate * 1000) / sampleRate) + padding;
+    }
+  }
+  return start === 0 ? bytes : bytes.subarray(Math.min(start, bytes.length));
+}
+
 /** Dialog → en MP3: replik för replik i ordning, svaren ihopsatta. Ett fel i
  * någon replik kastar — ett avsnitt med halva dialogen får aldrig sändas. */
 export async function synthesizeDialogue(
@@ -44,7 +78,7 @@ export async function synthesizeDialogue(
       },
     );
     if (!res.ok) throw new Error(`ElevenLabs TTS ${res.status}: ${await res.text()}`);
-    parts.push(new Uint8Array(await res.arrayBuffer()));
+    parts.push(stripMp3Headers(new Uint8Array(await res.arrayBuffer())));
   }
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let offset = 0;
