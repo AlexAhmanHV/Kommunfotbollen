@@ -2,8 +2,8 @@
 // (Render gratis har 512 MB minne; ett mobilfoto som sharp avkodar i
 // körtid kan ta flera hundra MB).
 //
-// Lägg originalen i bilder/lag/<slug>.<jpg|jpeg|png|webp> (mappen ignoreras
-// av git) och kör: npm run images:lag
+// Lägg originalen i bilder/lag/<slug>.<jpg|jpeg|png|webp>
+// och kör: npm run images:lag
 // Resultat: public/images/lag/<slug>.webp (1600 px) och <slug>-640.webp.
 
 import { readdirSync, mkdirSync } from "node:fs";

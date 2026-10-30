@@ -2,7 +2,7 @@
 
 En liggande bild per lokalt lag, helst minst 1600 px bred.
 
-1. Lägg originalet i `bilder/lag/` i projektroten (mappen ignoreras av git)
+1. Lägg originalet i `bilder/lag/` i projektroten
    med lagets namn nedan, t.ex. `bilder/lag/ifk-vastervik.jpg`. JPG, PNG
    och WebP går bra.
 2. Kör `npm run images:lag`. Skriptet skapar `<namn>.webp` (1600 px) och
